@@ -1,48 +1,35 @@
 
-CC=c++
-DEBUG=-g -Wall
+CC=g++
+DEBUG=-g #-Wall
 SPEEDFLAGS=-O3 -mcpu=cortex-a9 -ftree-vectorize -funroll-loops -ftree-loop-ivcanon -mfloat-abi=hard #-mfpu=neon-vfpv4 #
 #CPPFLAGS=-std=c++14 -lfftw3f $(SPEEDFLAGS)
-CPPFLAGS=-std=c++14 -lfftw3f $(DEBUG)
+CPPFLAGS=-std=c++14 $(DEBUG)
+LIB := -lfftw3f -L lib
+INC := -I include
 
-HDR=src/stft.h src/mfcc.h src/e3e_detection.h src/windows.h
-SRC=stft.cpp srpphat.cpp windows.cpp
+SRCEXT=cpp
+SRC=$(shell find src -type f) #stft.cpp srpphat.cpp windows.cpp
 OBJS=src/stft.o src/windows.o
-TESTS=test_complex test_fftw test_stft test_windows test_stft_speed \
-    test_beamforming_speed
-#test_sphere_sampling
+#TESTS=test_complex \
+      test_fftw \
+      test_stft \
+      test_windows \
+      test_stft_speed \
+      test_beamforming_speed
+TESTS=$(shell find tests -type f | grep \.cpp | cut -f 1 -d '.' | xargs basename -a)
 
-%.o: %.c $(HDR)
-	$(CC) -c -o $@ $< $(CPPFLAGS)
+hello:
+	@echo "helloworld sources: $(SRC)"
 
-test_srpphat: $(OBJS) tests/test_srpphat.o
-	$(CC) -o tests/$@ $^ $(CPPFLAGS)
+%.o: %.$(SRCEXT)
+	#@echo "Object: $@"
+	$(CC) $(CPPFLAGS) $(INC) $(LIB) -c -o $@ $< 
 
-test_sphere_sampling: $(OBJS) tests/test_sphere_sampling.o
-	$(CC) -o tests/$@ $^ $(CPPFLAGS)
-
-test_mfcc: $(OBJS) tests/test_mfcc.o
-	$(CC) -o tests/$@ $^ $(CPPFLAGS)
-
-test_stft_speed: $(OBJS) tests/test_stft_speed.o
-	$(CC) -o tests/$@ $^ $(CPPFLAGS)
-
-test_stft: $(OBJS) tests/test_stft.o src/stft.o
-	$(CC) -o tests/$@ $^ $(CPPFLAGS)
-
-test_fftw: tests/test_fftw.o
-	$(CC) -o tests/$@ $^ $(CPPFLAGS)
-
-test_complex: tests/test_complex.o
-	$(CC) -o tests/$@ $^ $(CPPFLAGS)
-
-test_windows: $(OBJS) tests/test_windows.o
-	$(CC) -o tests/$@ $^ $(CPPFLAGS)
-
-test_beamforming_speed: $(OBJS) tests/test_beamforming_speed.o
-	$(CC) -o tests/$@ $^ $(CPPFLAGS)
+$(TESTS): $(OBJS)
+	$(CC) tests/$@.cpp -o bin/$@ $^ $(CPPFLAGS) $(INC) $(LIB)
 
 tests: $(TESTS)
 
 clean:
-	rm -f tests/*.o ./test_* src/*.o
+	rm -f bin/* build/* src/*.o
+

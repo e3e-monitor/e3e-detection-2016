@@ -2,7 +2,7 @@
 #include <iomanip>
 #include <cmath>
 
-#include "../src/windows.h"
+#include "windows.h"
 
 /*
  * The test arrays were generated with pyroomacoustics

@@ -9,7 +9,7 @@
 
 #include <fftw3.h>
 
-#include "../src/stft.h"
+#include "stft.h"
 
 #define NFRAMES 1000
 #define CHANNELS 48
