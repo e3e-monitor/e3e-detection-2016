@@ -14,8 +14,8 @@
 
 #include "pyramicio.h"
 
-#define NBUFFERS 4
-#define BUFFER_LEN 100
+#define NBUFFERS 3
+#define BUFFER_LEN 2048
 #define OCHANNELS 2
 #define OUT_BUFFER_SIZE (OCHANNELS * BUFFER_LEN)
 
