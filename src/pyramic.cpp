@@ -19,7 +19,9 @@ Pyramic::Pyramic(int _num_samples)
 
   for (i = 0 ; i < N_BUFFERS ; i++)
   {
+    this->read_buffers[i].resize(this->read_buffer_size);
     this->q_read_empty.push(&(this->read_buffers[i]));
+    this->play_buffers[i].resize(this->play_buffer_size);
     this->q_play_empty.push(&(this->play_buffers[i]));
   }
 }
@@ -73,7 +75,7 @@ void Pyramic::reader()
   int16_t *input_buffers[2];
 
   // Start capture
-  pyramicStartCapture(this->p, 2 * this->read_buffer_size);
+  pyramicStartCapture(this->p, 2 * this->num_samples);
   struct inputBuffer inBuf = pyramicGetInputBuffer(this->p, 0); // 0 for 1st half, actually a pointer to the whole buffer
 
   // the double buffer
