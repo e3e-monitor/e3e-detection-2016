@@ -15,7 +15,7 @@
 #include "pyramicio.h"
 
 #define NBUFFERS 4
-#define BUFFER_LEN 128
+#define BUFFER_LEN 100
 #define OCHANNELS 2
 #define OUT_BUFFER_SIZE (OCHANNELS * BUFFER_LEN)
 
@@ -85,6 +85,9 @@ void playback()
       {
         pyramicEnableOutput(p, true);
         is_pyramic_enabled = true;
+
+        while (pyramicGetCurrentOutputBufferHalf(p) == 0)
+          usleep(50);
       }
     }
     else
@@ -166,6 +169,8 @@ int main(void)
 	}
 	else
 		printf("Failed to init Pyramic !\n");
+
+  pyramicDeinitPyramic(p);
 
 	return 0;
 }

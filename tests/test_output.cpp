@@ -16,7 +16,7 @@
 
 #include "pyramicio.h"
 
-#define BUFFER_LEN 1000
+#define BUFFER_LEN 100
 #define SINE_PERIOD 48
 
 int sine_counter = 0;
@@ -43,7 +43,7 @@ void playback()
   bool is_pyramic_enabled = false;
 
   // Get pointer to output buffer
-  pyramicEnableOutput(p, 0);  // make sure the output is not enabled
+  pyramicEnableOutput(p, 0);
   struct outputBuffer outBuf = pyramicGetOutputBuffer(p, 8 * BUFFER_LEN);  // 2nd arg is length in bytes (i.e., 2 buffers x 2 bytes/sample x 2 channels x buffer length)
   int16_t *out_buffers[2] = {
     outBuf.samples,
@@ -74,7 +74,7 @@ void playback()
       while (is_pyramic_enabled && pyramicGetCurrentOutputBufferHalf(p) == current_half)
         usleep(50);
 
-      printf("Pyramic current half: %d\n", (int)pyramicGetCurrentOutputBufferHalf(p));
+      //printf("Pyramic current half: %d\n", (int)pyramicGetCurrentOutputBufferHalf(p));
 
       for (i = 0 ; i < BUFFER_LEN ; i++)
       {
