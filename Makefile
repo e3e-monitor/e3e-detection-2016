@@ -25,12 +25,8 @@ hello:
 	@echo $(OBJECTS)
 
 $(BUILDDIR)/%.o: $(SRCDIR)/%.$(SRCEXT)
-<<<<<<< HEAD
 	mkdir -p build
 	$(CC) $(LDFLAGS) $(INC) $(CPPFLAGS) -c -o $@ $< $(LIB) 
-=======
-	$(CC) $(LDFLAGS) $(INC) $(CPPFLAGS) -c -o $@ $< $(LIB)
->>>>>>> ad5acdf5809f04e927167019e53c1cbb1eca625b
 
 $(TESTS): $(OBJECTS)
 	mkdir -p tests/bin
