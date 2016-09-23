@@ -3,13 +3,16 @@ CC=c++
 DEBUG=-g -Wall
 CPPFLAGS=-std=c++14 -lfftw3f $(DEBUG)
 
-HDR=src/stft.h src/mfcc.h src/e3e_detection.h
+HDR=src/stft.h src/mfcc.h src/e3e_detection.h 
 SRC=stft.cpp
 OBJS=src/stft.o src/mfcc.o src/srpphat.o
-TESTS=test_complex test_fftw test_stft test_stft_speed test_mfcc test_sphere_sampling
+TESTS=test_complex test_fftw test_stft test_stft_speed test_mfcc test_sphere_sampling test_trigger_stft
 
 %.o: %.c $(HDR)
 	$(CC) -c -o $@ $< $(CPPFLAGS)
+
+test_trigger_stft: $(OBJS) tests/test_trigger_stft.o
+	$(CC) -o tests/$@ $^ $(CPPFLAGS)
 
 test_sphere_sampling: $(OBJS) tests/test_sphere_sampling.o
 	$(CC) -o tests/$@ $^ $(CPPFLAGS)
