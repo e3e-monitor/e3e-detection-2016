@@ -42,8 +42,51 @@
 
 namespace hal = matrix_hal;
 
+void update_LED(float* probs, hal::EverloopImage *image1d)
+{
 
-int main(int argc,char** argv) {
+  #define LED_MAX 500
+
+  int normProbs[35];
+  int map[35] = { 24, 23, 22, 21, 20, 19, 18, 17, 16, 15,
+                  14, 13, 12, 11, 10,  9,  8,  7,  6,  5, 
+                   4,  3,  2,  1,  0, 34, 33, 32, 31, 30, 29, 28, 27, 26, 25};
+
+  float maxProb = 0;
+  int iMaxProb = 0;
+  /* search the max prob and normaliz*/
+  for(int i = 0; i < 35; i++)
+    if(probs[i]>maxProb)
+    {
+      maxProb=probs[i];
+      iMaxProb=i;
+    }
+
+
+
+  for(int i=0; i<35; i++)
+    normProbs[i] = LED_MAX * (float)probs[i]/(float)maxProb;
+
+  for(int i=0; i<35; i++)
+  {
+    image1d->leds[map[i]].red = normProbs[i];
+    image1d->leds[map[i]].blue = 0.1 * (LED_MAX - normProbs[i]);
+    image1d->leds[map[i]].green = 5;
+  }
+
+  /*
+  for (hal::LedValue& led : image1d.leds) {
+    led.red = 0;
+    led.green = 0;
+    led.blue = static_cast<int>(std::sin(counter / 128.0) * 7.0) + 8;
+    led.white = 0;
+    */
+
+}
+
+int main(int argc,char** argv) 
+{
+
   hal::WishboneBus bus;
   bus.SpiInit();
 
@@ -66,9 +109,8 @@ int main(int argc,char** argv) {
   e3e_complex *fd_ptr;
   int argmax = 0;
 
-  int16_t trgthr=atoi(argv[1]);
-
   assert(mics.NumberOfSamples() == FFT_SIZE);
+  assert(SRP_N_GRID == 35);
 
   while (true) 
   {
@@ -87,7 +129,10 @@ int main(int argc,char** argv) {
 
     argmax = srpphat->process();
 
-    std::cout << srpphat->grid[argmax][0] / M_PI * 180. << std::endl;
+    update_LED(srpphat->spatial_spectrum, &image1d);
+    everloop.Write(&image1d);
+
+    //std::cout << srpphat->grid[argmax][0] / M_PI * 180. << std::endl;
     
   }
 
