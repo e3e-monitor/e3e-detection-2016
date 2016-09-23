@@ -46,11 +46,17 @@ void update_LED(float* probs, hal::EverloopImage *image1d)
 {
 
   #define LED_MAX 500
+  #define MAX_PWR 100000
 
   int normProbs[35];
+  /*
   int map[35] = { 24, 23, 22, 21, 20, 19, 18, 17, 16, 15,
                   14, 13, 12, 11, 10,  9,  8,  7,  6,  5, 
                    4,  3,  2,  1,  0, 34, 33, 32, 31, 30, 29, 28, 27, 26, 25};
+                   */
+  int map[35] = { 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15,
+                  14, 13, 12, 11, 10,  9,  8,  7,  6,  5, 
+                   4,  3,  2,  1,  0, 34, 33, 32, 31, 30 };
 
   float maxProb = 0;
   int iMaxProb = 0;
@@ -64,14 +70,28 @@ void update_LED(float* probs, hal::EverloopImage *image1d)
 
 
 
-  for(int i=0; i<35; i++)
-    normProbs[i] = LED_MAX * (float)probs[i]/(float)maxProb;
+  if (maxProb >= MAX_PWR)
+  {
+    for(int i=0; i<35; i++)
+      normProbs[i] = LED_MAX * (float)probs[i]/(float)maxProb;
+  }
+  else if (maxProb >= 0.01 * MAX_PWR)
+  {
+    for(int i=0; i<35; i++)
+      normProbs[i] = LED_MAX * (float)probs[i]/(float)MAX_PWR;
+  }
+  else
+  {
+    for(int i=0; i<35; i++)
+      normProbs[i] = 0;
+  }
+
 
   for(int i=0; i<35; i++)
   {
     image1d->leds[map[i]].red = normProbs[i];
-    image1d->leds[map[i]].blue = 0.1 * (LED_MAX - normProbs[i]);
-    image1d->leds[map[i]].green = 5;
+    image1d->leds[map[i]].blue = 0.05 * (LED_MAX - normProbs[i]);
+    image1d->leds[map[i]].green = 0.1 * (LED_MAX - normProbs[i]);
   }
 
   /*
@@ -133,6 +153,7 @@ int main(int argc,char** argv)
     everloop.Write(&image1d);
 
     //std::cout << srpphat->grid[argmax][0] / M_PI * 180. << std::endl;
+    //std::cout << srpphat->spatial_spectrum[argmax] << std::endl;
     
   }
 
