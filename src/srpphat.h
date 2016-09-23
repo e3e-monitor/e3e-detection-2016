@@ -29,8 +29,9 @@ class SRPPHAT
     int n_pairs;
     int *pairs;
 
-    float c; 
-    
+    e3e_complex *G;
+    STFT * stft;
+
     std::string config_name;
 
     int n_grid;
@@ -39,10 +40,10 @@ class SRPPHAT
     int fft_size;
     int k_min, k_len;
     int n_frames;
-         
 
-    e3e_complex * G;
-    STFT * stft;
+    float fs; // sampling frequency
+
+    float c;  // speed of sound
 
     float theta;
     int argmax;
@@ -52,11 +53,8 @@ class SRPPHAT
    
     int process();
      
-
-    SRPPHAT(STFT * stft, int k_min, int k_len, int n_grid, int n_frames, int dim);
+    SRPPHAT(STFT * stft, std::string config, int k_min, int k_len, int n_grid, int n_frames, float fs, float c, int dim);
     ~SRPPHAT();
-
-    void set_c(float c) { this->c = c; }
 
 };
 

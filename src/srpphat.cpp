@@ -1,10 +1,6 @@
 
 #include "srpphat.h"
 
-#define _USE_MATH_DEFINES_
-
-
-
 void sample_sp_rand_points(float ** coordinates, int N_samples){
   srand (time(NULL));
   float rnd;
@@ -134,8 +130,8 @@ void sample_sp_even_points_2p5D(float ** coordinates, float **grid_cart, int N_s
 
 
 
-SRPPHAT::SRPPHAT(STFT * stft, int k_min, int k_len, int n_grid, int n_frames, int dim)
-  : n_grid(n_grid), k_min(k_min), k_len(k_len), n_frames(n_frames)
+  SRPPHAT::SRPPHAT(STFT * stft, std::string config, int k_min, int k_len, int n_grid, int n_frames, float fs, float c, int dim)
+: stft(stft), config_name(config), n_grid(n_grid), k_min(k_min), k_len(k_len), n_frames(n_frames), fs(fs), c(c)
 {
   this->fft_size = stft->fft_size;
   this->channels = stft->channels;
@@ -157,7 +153,7 @@ SRPPHAT::SRPPHAT(STFT * stft, int k_min, int k_len, int n_grid, int n_frames, in
     sample_sp_even_points_2p5D(this->grid, this->grid_cart, n_grid);
 
   // allocate all pairs
-  this->pairs = new int[channels * (channels - 1) / 2];
+  this->pairs = new int[channels * (channels - 1)];
   this->n_pairs = 0;
   for (int i = 0 ; i < channels ; i++)
     for (int j = i+1 ; j < channels ; j++)
@@ -179,6 +175,8 @@ SRPPHAT::SRPPHAT(STFT * stft, int k_min, int k_len, int n_grid, int n_frames, in
 
   // allocate G matrix
   this->G = new e3e_complex[k_len * this->n_pairs];
+  for (int i = 0 ; i < k_len * this->n_pairs ; i++)
+    this->G[i] = 0.;
 
 }
 
@@ -206,22 +204,22 @@ int SRPPHAT::process()
   // Update G
   for (int k = 0 ; k < k_len ; k++)
     for (int p = 0 ; p < this->n_pairs ; p++)
-      {
-        int i = this->pairs[p*2];
-        int j = this->pairs[p*2 + 1];
+    {
+      int i = this->pairs[p*2];
+      int j = this->pairs[p*2 + 1];
 
-        // remove oldest frame
-        e3e_complex xi = this->stft->get_fd_sample(this->n_frames, k, i);
-        e3e_complex xj = this->stft->get_fd_sample(this->n_frames, k, j);
+      // remove oldest frame
+      e3e_complex xi = this->stft->get_fd_sample(this->n_frames, k + this->k_min, i);
+      e3e_complex xj = this->stft->get_fd_sample(this->n_frames, k + this->k_min, j);
 
-        this->G[k*this->n_pairs + p] -= xi * conj(xj);
+      this->G[k*this->n_pairs + p] -= xi * std::conj(xj);
 
-        // add newest frame
-        xi = this->stft->get_fd_sample(0, k, i);
-        xj = this->stft->get_fd_sample(0, k, j);
+      // add newest frame
+      xi = this->stft->get_fd_sample(0, k + this->k_min, i);
+      xj = this->stft->get_fd_sample(0, k + this->k_min, j);
 
-        this->G[k*this->n_pairs + p] += xi * conj(xj);
-      }
+      this->G[k*this->n_pairs + p] += xi * std::conj(xj);
+    }
 
   // Compute the cost function for all grid points
   this->argmax = 0;
@@ -229,22 +227,23 @@ int SRPPHAT::process()
 
   for (int n = 0 ; n < this->n_grid ; n++)
   {
-    e3e_complex tmp;
+    e3e_complex tmp(0,0);
 
     for (int p = 0 ; p < this->n_pairs ; p++)
     {
       for (int k = 0 ; k < this->k_len ; k++)
       {
-        int tw_ind = n + p*this->n_grid + k*this->n_grid*this->k_len;
+        int tw_ind = n + p*this->n_grid + k*this->n_grid*this->n_pairs;
         int g_ind = k*this->n_pairs + p;
 
         e3e_complex Gval = this->G[g_ind];
-        float Gabs = abs(Gval);
-        tmp += Gval / Gabs * this->twiddle_lut[tw_ind];
+        float Gabs = std::abs(Gval);
+        if (Gabs > 1e-5)
+          tmp += Gval / Gabs * this->twiddle_lut[tw_ind];
       }
     }
 
-    this->spatial_spectrum[n] = norm(tmp);
+    this->spatial_spectrum[n] = std::norm(tmp);
 
     if (this->spatial_spectrum[n] > max)
     {
@@ -258,8 +257,9 @@ int SRPPHAT::process()
 
 void SRPPHAT::build_lut()
 {
-  using namespace std::complex_literals;
   this->twiddle_lut = new e3e_complex[k_len*this->n_pairs*this->n_grid];
+  e3e_complex imag(0,1);
+  float pi = M_PI;
 
   for (int k = 0 ; k < k_len ; k++)
     for (int p = 0 ; p < this->n_pairs ; p++)
@@ -275,9 +275,11 @@ void SRPPHAT::build_lut()
           ip += delta * this->grid_cart[n][v];
         }
 
-        double exponent = 2. * M_PI * float(this->k_min + k) / float(this->fft_size) * ip / this->c;
-        int ind = n + p*this->n_grid + k*this->n_grid*this->k_len;
-        this->twiddle_lut[ind] = std::exp(1i * exponent);
+        float freq = float(this->k_min + k) / float(this->fft_size) * this->fs;
+        float exponent = 2 * pi * freq * ip / this->c;
+
+        int ind = n + p*this->n_grid + k*this->n_grid*this->n_pairs;
+        this->twiddle_lut[ind] = std::exp(imag * exponent);
       }
 
 }
@@ -297,7 +299,11 @@ void SRPPHAT::read_mic_locs()
   getline(fin, header);
 
   while(!fin.eof()){
-    fin >> ch >> x >> y >> z;
+
+    if (!(fin >> ch))
+      break;
+
+    fin >> x >> y >> z;
 
     if (ch < 0 || ch >= this->channels)
       std::cout << "Error: channel number too large!!!" << std::endl;

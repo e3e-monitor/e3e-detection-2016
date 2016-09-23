@@ -1,4 +1,5 @@
 
+#include <iostream>
 #include "stft.h"
 
 /* Allocate all the buffers and create the FFTW plans */
