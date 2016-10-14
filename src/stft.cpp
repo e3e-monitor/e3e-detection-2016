@@ -3,7 +3,7 @@
 
 /* Allocate all the buffers and create the FFTW plans */
 STFT::STFT(int _fft_size, int _n_frames, int _channels)
-: n_frames(_n_frames), channels(_channels), fft_size(_fft_size)
+: fft_size(_fft_size), n_frames(_n_frames), channels(_channels)
 {
   int dims[] = { _fft_size };
 
@@ -69,17 +69,34 @@ std::complex<float> *STFT::get_out_buffer()
 
 
 /* transform the current frame and returns a pointer to it, then move to the next frame */
-void STFT::transform(void)
+std::complex<float> *STFT::transform(void)
 {
+  // This is a pointer to the chunk of data we will transform
+  std::complex<float> *ret_buf = this->circ_out_buffer 
+                                + this->current_frame * this->circ_out_buffer_size;
   
   fftwf_execute(this->plans[this->current_frame]);
+
+  // increment frame counter and loop if necessary
   this->current_frame += 1;
+  if (this->current_frame == this->n_frames)
+    this->current_frame = 0;
+
+  return ret_buf;
 }
 
 /* return a specific sample from the output buffer */
-std::complex<float> STFT::get_sample(int frame, int frequency, int channel)
+std::complex<float> STFT::get_fd_sample(int frame, int frequency, int channel)
 {
-  int i = frame * this->n_samples_per_out_frame + frequency * this->channels + channel;
+  int circular_index = (this->n_frames + this->current_frame - frame) % this->n_frames;
+  int i = circular_index * this->n_samples_per_out_frame + frequency * this->channels + channel;
   return this->circ_out_buffer[i];
+}
+
+float STFT::get_td_sample(int frame, int index, int channel)
+{
+  int circular_index = (this->n_frames + this->current_frame - frame) % this->n_frames;
+  int i = circular_index * this->n_samples_per_in_frame + index * this->channels + channel;
+  return this->circ_in_buffer[i];
 }
 

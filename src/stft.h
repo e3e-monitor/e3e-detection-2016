@@ -5,17 +5,12 @@
 #include <cmath>
 #include <fftw3.h>
 
-#define FRAME_SIZE 512
-#define FFT_SIZE 512
-#define N_FRAMES 10
-#define CHANNELS 8
-
 class STFT
 {
   public:
+    int fft_size;
     int n_frames;
     int frame_size;
-    int fft_size;
     int channels;
 
     fftwf_plan *plans;
@@ -34,9 +29,10 @@ class STFT
 
     float *get_in_buffer();
     std::complex<float> *get_out_buffer();
-    void transform();
+    std::complex<float> *transform();
 
-    std::complex<float> get_sample(int frame, int frequency, int channel);
+    std::complex<float> get_fd_sample(int frame, int frequency, int channel);
+    float get_td_sample(int frame, int index, int channel);
 
 };
 
