@@ -13,7 +13,6 @@ int main(int argc, char **argv)
   float in_array[N], back_array[N];
   std::complex<float> out_array[N/2+1];
   fftwf_complex *X;
-  int dims[] = { N };
 
   X = reinterpret_cast<fftwf_complex *>(out_array);
 

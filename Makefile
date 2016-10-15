@@ -3,13 +3,18 @@ CC=c++
 DEBUG=-g -Wall
 CPPFLAGS=-std=c++14 -lfftw3f $(DEBUG)
 
-OBJS=stft.o
-TESTS=test_complex test_fftw
+HDR=stft.h
+SRC=stft.cpp
+OBJS=src/stft.o
+TESTS=test_complex test_fftw test_stft test_stft_speed
 
-%.o: %.c $(DEPS)
+%.o: %.c $(HDR)
 	$(CC) -c -o $@ $< $(CPPFLAGS)
 
-test_stft: tests/test_stft.o src/stft.o
+test_stft_speed: $(OBJS) tests/test_stft_speed.o
+	$(CC) -o tests/$@ $^ $(CPPFLAGS)
+
+test_stft: $(OBJS) tests/test_stft.o src/stft.o
 	$(CC) -o tests/$@ $^ $(CPPFLAGS)
 
 test_fftw: tests/test_fftw.o
