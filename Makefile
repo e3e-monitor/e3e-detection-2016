@@ -5,11 +5,14 @@ CPPFLAGS=-std=c++14 -lfftw3f $(DEBUG)
 
 HDR=src/stft.h src/mfcc.h src/e3e_detection.h
 SRC=stft.cpp
-OBJS=src/stft.o src/mfcc.o
-TESTS=test_complex test_fftw test_stft test_stft_speed test_mfcc
+OBJS=src/stft.o src/mfcc.o src/srpphat.o
+TESTS=test_complex test_fftw test_stft test_stft_speed test_mfcc test_sphere_sampling
 
 %.o: %.c $(HDR)
 	$(CC) -c -o $@ $< $(CPPFLAGS)
+
+test_sphere_sampling: $(OBJS) tests/test_sphere_sampling.o
+	$(CC) -o tests/$@ $^ $(CPPFLAGS)
 
 test_mfcc: $(OBJS) tests/test_mfcc.o
 	$(CC) -o tests/$@ $^ $(CPPFLAGS)
