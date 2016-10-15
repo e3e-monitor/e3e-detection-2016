@@ -17,7 +17,7 @@ STFT::STFT(int _fft_size, int _n_frames, int _channels)
 
   // allocate the buffers
   this->circ_in_buffer = new float[this->circ_in_buffer_size];
-  this->circ_out_buffer = new std::complex<float>[this->circ_out_buffer_size];
+  this->circ_out_buffer = new e3e_complex[this->circ_out_buffer_size];
 
   // Allocate space for the plans
   this->plans = new fftwf_plan[_n_frames];
@@ -61,7 +61,7 @@ float *STFT::get_in_buffer()
 }
 
 /* return a pointer to the current output buffer */
-std::complex<float> *STFT::get_out_buffer()
+e3e_complex *STFT::get_out_buffer()
 {
   int buf_index = (this->current_frame * this->n_samples_per_out_frame) % this->circ_out_buffer_size;
   return this->circ_out_buffer + buf_index;
@@ -69,10 +69,10 @@ std::complex<float> *STFT::get_out_buffer()
 
 
 /* transform the current frame and returns a pointer to it, then move to the next frame */
-std::complex<float> *STFT::transform(void)
+e3e_complex *STFT::transform(void)
 {
   // This is a pointer to the chunk of data we will transform
-  std::complex<float> *ret_buf = this->circ_out_buffer 
+  e3e_complex *ret_buf = this->circ_out_buffer 
                                 + this->current_frame * this->circ_out_buffer_size;
   
   fftwf_execute(this->plans[this->current_frame]);
@@ -86,16 +86,16 @@ std::complex<float> *STFT::transform(void)
 }
 
 /* return a specific sample from the output buffer */
-std::complex<float> STFT::get_fd_sample(int frame, int frequency, int channel)
+e3e_complex STFT::get_fd_sample(int frame, int frequency, int channel)
 {
-  int circular_index = (this->n_frames + this->current_frame - frame) % this->n_frames;
+  int circular_index = (this->n_frames + this->current_frame - 1 - frame) % this->n_frames;
   int i = circular_index * this->n_samples_per_out_frame + frequency * this->channels + channel;
   return this->circ_out_buffer[i];
 }
 
 float STFT::get_td_sample(int frame, int index, int channel)
 {
-  int circular_index = (this->n_frames + this->current_frame - frame) % this->n_frames;
+  int circular_index = (this->n_frames + this->current_frame - 1 - frame) % this->n_frames;
   int i = circular_index * this->n_samples_per_in_frame + index * this->channels + channel;
   return this->circ_in_buffer[i];
 }

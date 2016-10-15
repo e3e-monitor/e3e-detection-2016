@@ -8,6 +8,7 @@
 
 #include <fftw3.h>
 
+#include "../src/e3e_detection.h"
 #include "../src/stft.h"
 
 #define FFT_SIZE 512
@@ -29,7 +30,7 @@ float rand_val()
 int main(int argc, char **argv)
 {
   float buf_in[FFT_SIZE];
-  std::complex<float> buf_out[FFT_SIZE/2 + 1];
+  e3e_complex buf_out[FFT_SIZE/2 + 1];
   fftwf_complex *X = reinterpret_cast<fftwf_complex *>(buf_out);
 
   STFT engine(FFT_SIZE, NFRAMES, CHANNELS);

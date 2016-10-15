@@ -5,6 +5,8 @@
 #include <cmath>
 #include <fftw3.h>
 
+#include "../src/e3e_detection.h"
+
 class STFT
 {
   public:
@@ -21,17 +23,17 @@ class STFT
     int circ_out_buffer_size;
 
     float *circ_in_buffer;
-    std::complex<float> *circ_out_buffer;  // circular buffer pointer
+    e3e_complex *circ_out_buffer;  // circular buffer pointer
     int current_frame = 0;
 
     STFT(int _fft_size, int _n_frames, int _channels);
     ~STFT();
 
     float *get_in_buffer();
-    std::complex<float> *get_out_buffer();
-    std::complex<float> *transform();
+    e3e_complex *get_out_buffer();
+    e3e_complex *transform();
 
-    std::complex<float> get_fd_sample(int frame, int frequency, int channel);
+    e3e_complex get_fd_sample(int frame, int frequency, int channel);
     float get_td_sample(int frame, int index, int channel);
 
 };
