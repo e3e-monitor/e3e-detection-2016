@@ -1,4 +1,5 @@
 
+#include <string.h>
 #include <cmath>
 
 #include "../src/mfcc.h"
