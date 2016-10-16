@@ -33,8 +33,8 @@ def unit_vec(doa):
         return np.array([np.cos(doa[0]), np.sin(doa[0])])
 
     elif doa.ndim == 2 and doa.shape[0] == 2:
-        s = np.sin(doa[1])
-        return np.array([s * np.cos(doa[0]), s * np.sin(doa[0]), np.cos(doa[1])])
+        s = np.cos(doa[1])
+        return np.array([s * np.cos(doa[0]), s * np.sin(doa[0]), np.sin(doa[1])])
 
 
 def gen_far_field_ir(doa, R, fs):
@@ -141,8 +141,9 @@ if __name__ == "__main__":
 
     R = np.array(R).T
 
+    print "Speed of sound:", pra.constants.get('c')
 
-    doa = np.array([[np.pi/2], [np.pi/2.]])
+    doa = np.array([[-2*np.pi/3], [0.]])
 
     fs = 16000
     SNR = 20

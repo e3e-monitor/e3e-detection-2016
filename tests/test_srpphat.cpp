@@ -12,10 +12,10 @@
 
 #define FS 16000
 
-#define SRP_N_GRID 18
+#define SRP_N_GRID 360
 #define SRP_NFRAMES 8
-#define SRP_K_MIN 30
-#define SRP_K_LEN 15
+#define SRP_K_MIN 1
+#define SRP_K_LEN 50
 #define SRP_DIM 2
 
 #define CONFIG_FILE "./CONFIG"
@@ -34,12 +34,12 @@ int main(int argc, char **argv)
     return 1;
   }
 
-  std::cout << "Opening file: " << argv[1] << std::endl;
+  std::cout << "# Opening file: " << argv[1] << std::endl;
   std::ifstream fin(argv[1], std::ifstream::in | std::ifstream::binary);
 
   int count = 0;
 
-  while (!fin.eof())
+  while (!fin.eof() && count < 10*NFRAMES)
   {
     float sample;
     int argmax;
@@ -54,24 +54,27 @@ int main(int argc, char **argv)
 
     argmax = srpphat->process();
 
+    /*
     for (int i = 0 ; i < srpphat->n_grid ; i++)
     {
       std::cout << srpphat->spatial_spectrum[i] << " ";
     }
-    
     std::cout << std::endl;
+    */
 
+    /*
+    std::cout << "Source detected at: " << srpphat->grid[argmax][0] / M_PI * 180. << " (ssval = ";
+    std::cout << srpphat->spatial_spectrum[argmax] << std::endl;
+    */
+    
     count++;
   }
 
 end:
-  std::cout << "******" << std::endl;
+
   for (int i = 0 ; i < srpphat->n_grid ; i++)
-  {
-    std::cout << srpphat->grid[i][0] / M_PI * 180. << " " ;
-    std::cout << srpphat->grid[i][1] / M_PI * 180. << " " ;
-    std::cout << srpphat->spatial_spectrum[i] << std::endl;
-  }
+    std::cout << srpphat->grid[i][0] << " " << srpphat->spatial_spectrum[i] << std::endl;
+
 
   fin.close();
   delete stft;

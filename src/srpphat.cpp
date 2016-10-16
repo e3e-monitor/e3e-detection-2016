@@ -247,8 +247,6 @@ int SRPPHAT::process()
       }
     }
 
-    //std::cerr << tmp << std::endl;
-
     this->spatial_spectrum[n] = std::norm(tmp);
 
     if (this->spatial_spectrum[n] > max)
@@ -281,10 +279,11 @@ void SRPPHAT::build_lut()
           ip += delta * this->grid_cart[n][v];
         }
 
-        float exponent = 2 * pi * float(this->k_min + k) / float(this->fft_size) * this->fs * ip / this->c;
+        float freq = float(this->k_min + k) / float(this->fft_size) * this->fs;
+        float exponent = 2 * pi * freq * ip / this->c;
+
         int ind = n + p*this->n_grid + k*this->n_grid*this->n_pairs;
         this->twiddle_lut[ind] = std::exp(imag * exponent);
-        std::cerr << exponent << " " << this->twiddle_lut[ind] << std::endl;
       }
 
 }

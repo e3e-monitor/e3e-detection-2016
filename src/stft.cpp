@@ -58,7 +58,6 @@ STFT::~STFT()
 float *STFT::get_in_buffer()
 {
   int buf_index = (this->current_frame * this->n_samples_per_in_frame) % this->circ_in_buffer_size;
-  std::cerr << "circ_buf_size: " << this->circ_in_buffer_size << " buf_index: " << buf_index << std::endl;
   return this->circ_in_buffer + buf_index;
 }
 
