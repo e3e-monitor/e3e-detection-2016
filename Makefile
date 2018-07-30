@@ -6,11 +6,11 @@ CPPFLAGS=-std=c++14 -lfftw3f $(DEBUG)
 MCDIR=../../matrix-creator-hal/cpp/driver/
 MCOBJS=everloop_image everloop microphone_array wishbone_bus
 
-HDR=src/stft.h src/mfcc.h src/e3e_detection.h
+HDR=src/stft.h src/mfcc.h src/e3e_detection.h src/windows.h
 SRC=stft.cpp srpphat.cpp
-OBJS=src/stft.o src/mfcc.o src/srpphat.o
+OBJS=src/stft.o src/mfcc.o src/srpphat.o src/windows.o
 TESTS=test_complex test_fftw test_stft test_stft_speed test_mfcc \
-	test_sphere_sampling test_srpphat test_trigger_stft
+	test_sphere_sampling test_srpphat test_windows
 
 %.o: %.c $(HDR)
 	$(CC) -c -o $@ $< $(CPPFLAGS)
@@ -37,6 +37,9 @@ test_fftw: tests/test_fftw.o
 	$(CC) -o tests/$@ $^ $(CPPFLAGS)
 
 test_complex: tests/test_complex.o
+	$(CC) -o tests/$@ $^ $(CPPFLAGS)
+
+test_windows: $(OBJS) tests/test_windows.o
 	$(CC) -o tests/$@ $^ $(CPPFLAGS)
 
 tests: $(TESTS)
