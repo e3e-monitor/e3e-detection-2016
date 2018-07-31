@@ -9,8 +9,7 @@ MCOBJS=everloop_image everloop microphone_array wishbone_bus
 HDR=src/stft.h src/mfcc.h src/e3e_detection.h src/windows.h
 SRC=stft.cpp srpphat.cpp
 OBJS=src/stft.o src/windows.o
-TESTS=test_complex test_fftw test_stft test_windows
-#test_stft_speed \
+TESTS=test_complex test_fftw test_stft test_windows test_stft_speed
 #test_sphere_sampling
 
 %.o: %.c $(HDR)
