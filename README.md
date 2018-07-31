@@ -1,17 +1,16 @@
-E3E Detection System 2016
-=========================
+Pyramic Demo at IWAENC 2018
+===========================
 
-This year we base the prototype on matrix creator with 8 microphones.
+We will use [Pyramic](https://github.com/LCAV/Pyramic) for a demo at IWAENC in Tokyo.
 
 ### Compile and run tests
 
     make tests
     ./tests/test_stft
     ./tests/test_stft_speed
+
 ### Dependencies
 
 To run the code with matrix creator, one needs to install
 
-* `matrix_creator_hal`
-* `wiringPi`
-
+* FFTW
