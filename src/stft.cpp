@@ -8,6 +8,16 @@ STFT::STFT(int _shift, int _fft_size, int _zpb, int _zpf, int _channels, int _fl
 : shift(_shift), fft_size(_fft_size), zeropad_b(_zpb), zeropad_f(_zpf),
   channels(_channels), flags(_flags)
 {
+  /**
+    Constructor for the STFT engine.
+
+    @param shift The frame shift
+    @param fft_size The size of the FFT (including padding, if any)
+    @param zpb The zero-padding at the end of the array
+    @param zpf The zero-padding at the front of the array
+    @param channels The number of channels
+    @param flags Specify which window scheme to use (STFT_NO_WINDOW, STFT_WINDOW_ANALYSIS, STFT_WINDOW_BOTH)
+    */
   int dims[] = { this->fft_size };
 
   // the size of the input buffer
