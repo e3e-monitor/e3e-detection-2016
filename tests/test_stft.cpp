@@ -5,24 +5,18 @@
 #include <complex>
 #include <cmath>
 #include <random>
+#include <stdio.h>
 
 #include <fftw3.h>
 
 #include "../src/e3e_detection.h"
 #include "../src/stft.h"
 
-#define FFT_SIZE 512
-#define SHIFT (256 + 100)
-#define NFRAMES 100
-#define ZB 0
-#define ZF 0
-#define CHANNELS 8
-#define WFLAG STFT_WINDOW_BOTH
 
 // Initialize RNG with random seed
 unsigned int time_ui = static_cast<unsigned int>( time(NULL) );
 std::default_random_engine generator(time_ui);
-std::uniform_real_distribution<float> dist(0,1.);
+std::uniform_real_distribution<float> dist(0,5.);
 
 // A wrapper to fill the arrays
 float rand_val()
@@ -30,8 +24,9 @@ float rand_val()
   return dist(generator);
 }
 
-int main(int argc, char **argv)
+void test_stft(int NFRAMES, int SHIFT, int FFT_SIZE, int CHANNELS, int ZB, int ZF, int WFLAG)
 {
+
   float buf_in[NFRAMES * SHIFT * CHANNELS];
   float buf_out[NFRAMES * SHIFT * CHANNELS];
 
@@ -44,9 +39,6 @@ int main(int argc, char **argv)
 
   for (int frame = 0 ; frame < NFRAMES ; frame++)
   {
-    std::cout << "Frame: " << frame << "\n";
-    std::cout.flush();
-
     // generate new values
     for (int sample = 0 ; sample < SHIFT ; sample++)
       for (int ch = 0 ; ch < CHANNELS ; ch++)
@@ -54,55 +46,49 @@ int main(int argc, char **argv)
 
     // process forward and backward
     engine.analysis(buf_in_ptr);
-    std::cout << "Checkpoint 1\n";
-    std::cout.flush();
     engine.synthesis(buf_out_ptr);
-    std::cout << "Checkpoint 2\n";
-    std::cout.flush();
 
     buf_in_ptr += SHIFT * CHANNELS;
     buf_out_ptr += SHIFT * CHANNELS;
   }
 
-  std::cout << "Processing done\n";
-  std::cout.flush();
-
-  int offset = FFT_SIZE - SHIFT;
+  int offset = (FFT_SIZE - SHIFT) * CHANNELS;
   for (int i = 0 ; i < NFRAMES * SHIFT * CHANNELS - offset ; i++)
   {
     double e = (buf_in[i] - buf_out[i+offset]);
 
+    /*
     std::cout << "frame " << i << " error " << e << " " << buf_in[i] << " " << buf_out[i+offset] << "\n";
     std::cout.flush();
+    */
 
     total_error = e * e;
   }
 
-    
-  std::cout << "Average error: " << total_error / (SHIFT * CHANNELS * NFRAMES) << "\n";
+  printf("fft_size=%d shift=%d channels=%d zb=%d zf=%d ", FFT_SIZE, SHIFT, CHANNELS, ZB, ZF);
+  if (WFLAG == STFT_NO_WINDOW)
+    printf("no window");
+  else if (WFLAG == STFT_WINDOW_ANALYSIS)
+    printf("analysis window");
+  else if (WFLAG == STFT_WINDOW_BOTH)
+    printf("analysis and synthesis windows");
+  printf("\n");
 
-  /*
-  for (int frame = 0 ; frame < NFRAMES ; frame++)
-  {
-    for (int ch = 0 ; ch < CHANNELS ; ch++)
-    {
-      if (errors[frame * CHANNELS + ch] > 1e-5)
-      {
-        std::cout << "** Ouch this is too large!! **" << std::endl;
-        std::cout << "Error: " << errors[frame * CHANNELS + ch] << std::endl;
-        std::cout << "Input:" << std::endl;
-        for (int i = 0 ; i < FFT_SIZE ; i++)
-          std::cout << engine.get_td_sample(frame, i, ch) << " ";
-        std::cout << std::endl;
+  printf("  Average error: %f\n", total_error / (SHIFT * CHANNELS * NFRAMES));
+}
 
-        std::cout << "Output:" << std::endl;
-        for (int i = 0 ; i < FFT_SIZE / 2 + 1 ; i++)
-          std::cout << engine.get_fd_sample(frame, i, ch) << " ";
-        std::cout << std::endl;
-      }
-    }
-  }
-  */
+int main(int argc, char **argv)
+{
+  test_stft(100, 128, 128, 1, 0, 0, STFT_NO_WINDOW);
+  test_stft(100, 128, 128, 4, 0, 0, STFT_NO_WINDOW);
+  test_stft(100, 128, 256, 1, 0, 0, STFT_WINDOW_ANALYSIS);
+  test_stft(100, 128, 256, 4, 0, 0, STFT_WINDOW_ANALYSIS);
+  test_stft(100, 128, 256, 1, 0, 0, STFT_WINDOW_BOTH);
+  test_stft(100, 128, 256, 4, 0, 0, STFT_WINDOW_BOTH);
+  test_stft(100, 68, 256, 1, 0, 0, STFT_WINDOW_BOTH);
+  test_stft(100, 68, 256, 4, 0, 0, STFT_WINDOW_BOTH);
+  test_stft(100, 150, 256, 1, 0, 0, STFT_WINDOW_BOTH);
+  test_stft(100, 150, 256, 4, 0, 0, STFT_WINDOW_BOTH);
+
   return 0;
-
 }

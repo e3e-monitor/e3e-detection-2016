@@ -41,6 +41,8 @@ STFT::STFT(int _shift, int _fft_size, int _zpb, int _zpf, int _channels, int _fl
       this->channels, 1,
       FFTW_ESTIMATE);
 
+  this->fftw_scale = 1. / this->fft_size;
+
   // zero all the buffers
   memset(this->state_in_buffer, 0, (this->channels * this->state_in_size) * sizeof(this->state_in_buffer[0]));
   memset(this->state_out_buffer, 0, (this->channels * this->state_out_size) * sizeof(this->state_out_buffer[0]));
@@ -93,15 +95,18 @@ e3e_complex *STFT::analysis(float *buffer)
 
   /* save the new state for next frame */
   offset = (this->zeropad_f + this->shift) * this->channels;
-  memcpy(this->time_buffer + offset, this->state_in_buffer, (this->state_in_size * this->channels) * sizeof(this->time_buffer[0]));
+  memcpy(this->state_in_buffer, this->time_buffer + offset, (this->state_in_size * this->channels) * sizeof(this->time_buffer[0]));
 
   /* apply analysis window if required */
   if (this->win_a != NULL)
   {
     offset = this->zeropad_f * this->channels;
-    for (int b = offset, m = 0 ; m < this->num_samples ; b += this->channels, m += 1)
+    for (int m = 0 ; m < this->num_samples ; m++)
+    {
+      offset += this->channels;
       for (int ch = 0 ; ch < this->channels ; ch++)
-        this->time_buffer[b + ch] *= (*this->win_a)[m];
+        this->time_buffer[offset + ch] *= (*this->win_a)[m];
+    }
   }
 
   /* now transform to frequency! */
@@ -113,7 +118,7 @@ e3e_complex *STFT::analysis(float *buffer)
 void STFT::synthesis(float *buffer)
 {
   /**
-    Performs sythesis of new input data.
+    Performs sythesis of newest complete frame
 
     @param buffer A buffer to store the freshly produced data. The size is (channels * shift).
     */
@@ -126,9 +131,12 @@ void STFT::synthesis(float *buffer)
   if (this->win_s != NULL)
   {
     offset = this->zeropad_f * this->channels;
-    for (int b = offset, m = 0 ; m < this->num_samples ; b += this->channels, m += 1)
+    for (int m = 0 ; m < this->num_samples ; m++)
+    {
+      offset += this->channels;
       for (int ch = 0 ; ch < this->channels ; ch++)
-        this->time_buffer[b + ch] *= (*this->win_s)[m];
+        this->time_buffer[offset + ch] *= (*this->win_s)[m];
+    }
   }
 
   if (this->shift <= this->state_out_size)
@@ -170,4 +178,7 @@ void STFT::synthesis(float *buffer)
         );
   }
 
+  /* apply inverse FFTW scaling */
+  for (int i = 0 ; i < this->channels * this->shift ; i++)
+    buffer[i] *= this->fftw_scale;
 }

@@ -16,19 +16,20 @@
 class STFT
 {
   public:
-    int flags;  // only used for the windows now
 
     // The different sizes involved in the STFT
-    int fft_size;
-    int num_samples;
     int shift;
+    int fft_size;
     int zeropad_b;
     int zeropad_f;
     int channels;
+    int flags;  // only used for the windows now
+    int num_samples;
 
     // The FFTW plans (forward and backward)
     fftwf_plan plan_analysis;
     fftwf_plan plan_synthesis;
+    float fftw_scale;
 
     // The window functions
     Window *win_a=NULL, *win_s=NULL;
