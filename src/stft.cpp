@@ -76,10 +76,10 @@ STFT::STFT(int _shift, int _fft_size, int _zpb, int _zpf, int _channels, int _fl
 /* Here we just delete the dynamically allocated arrays */
 STFT::~STFT()
 {
-  delete this->state_in_buffer;
-  delete this->state_out_buffer;
-  delete this->time_buffer;
-  delete this->freq_buffer;
+  delete[] this->state_in_buffer;
+  delete[] this->state_out_buffer;
+  delete[] this->time_buffer;
+  delete[] this->freq_buffer;
   if (this->win_a != NULL) delete this->win_a;
   if (this->win_s != NULL) delete this->win_s;
 }
@@ -113,9 +113,9 @@ e3e_complex *STFT::analysis(float *buffer)
     offset = this->zeropad_f * this->channels;
     for (int m = 0 ; m < this->num_samples ; m++)
     {
-      offset += this->channels;
       for (int ch = 0 ; ch < this->channels ; ch++)
         this->time_buffer[offset + ch] *= (*this->win_a)[m];
+      offset += this->channels;
     }
   }
 
@@ -143,9 +143,9 @@ void STFT::synthesis(float *buffer)
     offset = this->zeropad_f * this->channels;
     for (int m = 0 ; m < this->num_samples ; m++)
     {
-      offset += this->channels;
       for (int ch = 0 ; ch < this->channels ; ch++)
         this->time_buffer[offset + ch] *= (*this->win_s)[m];
+      offset += this->channels;
     }
   }
 
