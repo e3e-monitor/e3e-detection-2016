@@ -45,8 +45,10 @@ int main(int argc, char **argv)
 
     now = clock();
     for (int frame = 0 ; frame < NFRAMES ; frame++)
+    {
       engine->analysis(buf_in);
       engine->synthesis(buf_out);
+    }
     ellapsed = clock() - now;
 
     delete engine;
