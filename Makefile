@@ -1,13 +1,12 @@
 
 CC=c++
 DEBUG=-g -Wall
+SPEEDFLAGS=-O3 -mcpu=cortex-a9 -ftree-vectorize -funroll-loops -ftree-loop-ivcanon -mfloat-abi=hard #-mfpu=neon-vfpv4 #
+#CPPFLAGS=-std=c++14 -lfftw3f $(SPEEDFLAGS)
 CPPFLAGS=-std=c++14 -lfftw3f $(DEBUG)
 
-MCDIR=../../matrix-creator-hal/cpp/driver/
-MCOBJS=everloop_image everloop microphone_array wishbone_bus
-
 HDR=src/stft.h src/mfcc.h src/e3e_detection.h src/windows.h
-SRC=stft.cpp srpphat.cpp
+SRC=stft.cpp srpphat.cpp windows.cpp
 OBJS=src/stft.o src/windows.o
 TESTS=test_complex test_fftw test_stft test_windows test_stft_speed \
     test_beamforming_speed
@@ -15,9 +14,6 @@ TESTS=test_complex test_fftw test_stft test_windows test_stft_speed \
 
 %.o: %.c $(HDR)
 	$(CC) -c -o $@ $< $(CPPFLAGS)
-
-test_trigger_stft: $(OBJS) tests/test_trigger_stft.o
-	$(CC) -o tests/$@ $^ $(CPPFLAGS) -lmatrix_creator_hal -lwiringPi
 
 test_srpphat: $(OBJS) tests/test_srpphat.o
 	$(CC) -o tests/$@ $^ $(CPPFLAGS)
