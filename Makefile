@@ -1,9 +1,11 @@
 
 CC=c++
 DEBUG=-g -Wall
-SPEEDFLAGS=-O3 -mcpu=cortex-a9 -ftree-vectorize -funroll-loops -ftree-loop-ivcanon -mfloat-abi=hard #-mfpu=neon-vfpv4 #
-#CPPFLAGS=-std=c++14 -lfftw3f $(SPEEDFLAGS)
-CPPFLAGS=-std=c++14 -lfftw3f $(DEBUG)
+#SPEEDFLAGS=-O3 -ffast-math -mcpu=cortex-a9 -ftree-vectorize -funroll-loops -ftree-loop-ivcanon -mfloat-abi=hard #-mfpu=neon-vfpv4 #
+#SPEEDFLAGS=-O3 -ffast-math -ftree-vectorize -funroll-loops
+SPEEDFLAGS=-O3 -ftree-vectorize -funroll-loops
+CPPFLAGS=-std=c++14 -lfftw3f $(SPEEDFLAGS)
+#CPPFLAGS=-std=c++14 -lfftw3f $(DEBUG)
 
 HDR=src/stft.h src/mfcc.h src/e3e_detection.h src/windows.h
 SRC=stft.cpp srpphat.cpp windows.cpp
