@@ -1,35 +1,29 @@
 
-CC=g++
-DEBUG=-g #-Wall
-SPEEDFLAGS=-O3 -mcpu=cortex-a9 -ftree-vectorize -funroll-loops -ftree-loop-ivcanon -mfloat-abi=hard #-mfpu=neon-vfpv4 #
-#CPPFLAGS=-std=c++14 -lfftw3f $(SPEEDFLAGS)
-CPPFLAGS=-std=c++14 $(DEBUG)
-LIB := -lfftw3f -L lib
+CC := g++
+DEBUG := -g #-Wall
+SPEEDFLAGS := -O3 -mcpu=cortex-a9 -ftree-vectorize -funroll-loops -ftree-loop-ivcanon -mfloat-abi=hard #-mfpu=neon-vfpv4 #
+#CPPFLAGS := -std=c++14 -lfftw3f $(SPEEDFLAGS)
+CPPFLAGS := -std=c++14 $(DEBUG)
+LDFLAGS := -L "./lib"
+LIB := -lpyramicio -lfftw3f
 INC := -I include
 
-SRCEXT=cpp
-SRC=$(shell find src -type f) #stft.cpp srpphat.cpp windows.cpp
-OBJS=src/stft.o src/windows.o
-#TESTS=test_complex \
-      test_fftw \
-      test_stft \
-      test_windows \
-      test_stft_speed \
-      test_beamforming_speed
-TESTS=$(shell find tests -type f | grep \.cpp | cut -f 1 -d '.' | xargs basename -a)
+SRCDIR := src
+BUILDDIR := build
 
-hello:
-	@echo "helloworld sources: $(SRC)"
+SRCEXT := cpp
+SOURCES := $(shell find $(SRCDIR) -type f | grep \.$(SRCEXT)) #stft.cpp srpphat.cpp windows.cpp
+OBJECTS := $(patsubst $(SRCDIR)/%,$(BUILDDIR)/%,$(SOURCES:.$(SRCEXT)=.o))
+TESTS := $(shell find tests -type f | grep \.$(SRCEXT) | cut -f 1 -d '.' | xargs basename -a)
 
-%.o: %.$(SRCEXT)
-	#@echo "Object: $@"
-	$(CC) $(CPPFLAGS) $(INC) $(LIB) -c -o $@ $< 
+$(BUILDDIR)/%.o: $(SRCDIR)/%.$(SRCEXT)
+	$(CC) $(LDFLAGS) $(INC) $(CPPFLAGS) -c -o $@ $< $(LIB) 
 
-$(TESTS): $(OBJS)
-	$(CC) tests/$@.cpp -o bin/$@ $^ $(CPPFLAGS) $(INC) $(LIB)
+$(TESTS): $(OBJECTS)
+	mkdir -p tests/bin
+	$(CC) $(LDFLAGS) $(INC) $(CPPFLAGS) tests/$@.cpp -o tests/bin/$@ $^ $(LIB)
 
 tests: $(TESTS)
 
 clean:
-	rm -f bin/* build/* src/*.o
-
+	rm -f bin/* build/* tests/bin/*
