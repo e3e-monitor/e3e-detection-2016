@@ -25,6 +25,10 @@
 #ifndef PYRAMICIO_PYRAMICIO_H_
 #define PYRAMICIO_PYRAMICIO_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <inttypes.h>
 #include <unistd.h>
 
@@ -154,5 +158,9 @@ int pyramicSelectOutputSource(struct pyramic *p, int source);
  * pyramicGetOutputBuffer().
  */
 int pyramicSetOutputBuffer(struct pyramic *p, struct outputBuffer outputBuffer);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* PYRAMICIO_PYRAMICIO_H_ */
