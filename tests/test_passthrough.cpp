@@ -14,8 +14,8 @@
 
 #include "pyramicio.h"
 
-#define NBUFFERS 3
-#define BUFFER_LEN 2048
+#define NBUFFERS 4
+#define BUFFER_LEN 48000
 #define OCHANNELS 2
 #define OUT_BUFFER_SIZE (OCHANNELS * BUFFER_LEN)
 
@@ -41,10 +41,10 @@ void playback()
   int i;
 
   // Get pointer to output buffer
-  struct outputBuffer outBuf = pyramicGetOutputBuffer(p, 2 * OUT_BUFFER_SIZE);
+  struct outputBuffer outBuf = pyramicGetOutputBuffer(p, 4 * OUT_BUFFER_SIZE);  // is the length in bytes ???
   int16_t *out_buffers[2] = {
     outBuf.samples,
-    outBuf.samples + 2 * BUFFER_LEN
+    outBuf.samples + OUT_BUFFER_SIZE
   };
 
   // zero out the first buffer
@@ -52,7 +52,7 @@ void playback()
     outBuf.samples[i] = 0;
 
   int16_t *buffer;
-  int current_half = 2;
+  int current_half = 1;
 
   // mark as currently running
   is_playing = true;
@@ -63,10 +63,12 @@ void playback()
 
   // synchronize
   while (pyramicGetCurrentOutputBufferHalf(p) == current_half);
-  current_half = toggle_half(current_half);
+
 
   while (is_playing)
   {
+    current_half = toggle_half(current_half);
+
     // Wait for current half to be idle
     while (pyramicGetCurrentOutputBufferHalf(p) == current_half)
       ;
@@ -84,7 +86,6 @@ void playback()
       printf("Buffer underflow at playback\n");
     }
 
-    current_half = toggle_half(current_half);
   }
     
   // zero out the output buffer at the end
@@ -125,7 +126,8 @@ int main(void)
     current_half = toggle_half(current_half);
 
     int n = 0;
-    while (n < 100)
+    int nmax = (int)(10. * 48000 / BUFFER_LEN);
+    while (n < nmax)
     {
       // Wait until 1st half of buffer is idle
       while(pyramicGetCurrentBufferHalf(p) == current_half)
