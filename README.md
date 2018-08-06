@@ -5,8 +5,16 @@ We will use [Pyramic](https://github.com/LCAV/Pyramic) for a demo at IWAENC in T
 
 ### Compile and run tests
 
+    # build the tests
     make tests
+
+    # this won't be needed when we move the shared library to /usr/lib
+    export LD_LIBRARY_PATH=./lib:$LD_LIBRARY_PATH
+
+    # test correctness of STFT output
     ./tests/bin/test_stft
+
+    # speed to execture two-way STFT
     ./tests/bin/test_stft_speed
 
 

@@ -5,8 +5,8 @@ SPEEDFLAGS := -O3 -mcpu=cortex-a9 -ftree-vectorize -funroll-loops -ftree-loop-iv
 #CPPFLAGS := -std=c++14 -lfftw3f $(SPEEDFLAGS)
 CPPFLAGS := -std=c++14 $(DEBUG)
 LDFLAGS := -L "./lib"
-LIB := -lpyramicio -lfftw3f
-INC := -I include
+LIB := -lfftw3f -lpyramicio -lpthread
+INC := -I "./include"
 
 SRCDIR := src
 BUILDDIR := build
@@ -17,7 +17,7 @@ OBJECTS := $(patsubst $(SRCDIR)/%,$(BUILDDIR)/%,$(SOURCES:.$(SRCEXT)=.o))
 TESTS := $(shell find tests -type f | grep \.$(SRCEXT) | cut -f 1 -d '.' | xargs basename -a)
 
 $(BUILDDIR)/%.o: $(SRCDIR)/%.$(SRCEXT)
-	$(CC) $(LDFLAGS) $(INC) $(CPPFLAGS) -c -o $@ $< $(LIB) 
+	$(CC) $(LDFLAGS) $(INC) $(CPPFLAGS) -c -o $@ $< $(LIB)
 
 $(TESTS): $(OBJECTS)
 	mkdir -p tests/bin
