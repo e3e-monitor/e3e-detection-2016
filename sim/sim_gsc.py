@@ -30,12 +30,12 @@ source_files = [
         'fan_noise_short.wav',
         ]
 source_delays = [ 0., 1.5, 3.4, 7.5, 0. ]
-source_vars = [1., 1., 1., 1., 0.1]
+source_powers = [1., 1., 1., 1., 0.1]
 nfft = 2048
 shift = nfft // 2
 
 # gsc parameters
-step_size = 0.05
+step_size = 0.01
 pb_ff = 0.99  # projection back forgetting factor
 
 
@@ -48,10 +48,10 @@ calib_seq = np.random.choice([-1.,1.], size=int(T_calib * fs))
 
 # Now import the speech
 source_signals = []
-for fn in source_files:
+for fn, pwr in zip(source_files, source_powers):
     _, sig = wavfile.read(fn)
     sig = sig.astype(np.float)
-    sig /= np.std(sig)
+    sig *= np.sqrt(pwr) / np.std(sig)
     source_signals.append(sig)
 
 
@@ -140,6 +140,11 @@ while n + shift < recording.shape[0]:
     # the fixed branch of the GSC
     out_fixed_bf = np.sum(np.conj(fixed_weights) * X, axis=1)
 
+    # Now run the online projection back (seems more natural to do it on the fixed branch)
+    pb_den = pb_ff * pb_den + (1 - pb_ff) * np.conj(out_fixed_bf) * X[:,0]
+    pb_num = pb_ff * pb_num + (1 - pb_ff) * np.conj(out_fixed_bf) * out_fixed_bf
+    out_fixed_bf *= (pb_den / pb_num)
+
     # the adaptive branch of the GSC
     noise_ss_signal = project_null(X, fixed_weights)
     noise_ss_norm = np.sum(noise_ss_signal * np.conj(noise_ss_signal), axis=1)
@@ -148,11 +153,6 @@ while n + shift < recording.shape[0]:
     # compute the error signal and update the beamformer
     out_frame = out_fixed_bf - out_adaptive_bf
     adaptive_weights += (step_size / noise_ss_norm[:,None]) * noise_ss_signal * out_frame[:,None]
-
-    # Now run the online projection back
-    pb_den = pb_ff * pb_den + (1 - pb_ff) * np.conj(out_frame) * X[:,0]
-    pb_num = pb_ff * pb_num + (1 - pb_ff) * np.conj(out_frame) * out_frame
-    out_frame *= (pb_den / pb_num)
 
     # synthesize the output signal
     output_signal[n:n+shift] = stft_output.synthesis(out_frame)
