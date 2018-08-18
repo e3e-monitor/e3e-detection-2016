@@ -32,7 +32,7 @@ source_files = [
 source_delays = [ 0., 1.5, 3.4, 7.5, 0. ]
 source_vars = [1., 1., 1., 1., 0.1]
 nfft = 2048
-shift = nfft / 2
+shift = nfft // 2
 
 # gsc parameters
 step_size = 0.05
