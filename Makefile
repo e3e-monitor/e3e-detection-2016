@@ -9,9 +9,8 @@ SPEEDFLAGS=-O3 -ffast-math -ftree-vectorize -funroll-loops # -mcpu=cortex-a9 -ft
 #CPPFLAGS := -std=c++14 -lfftw3f $(SPEEDFLAGS)
 CPPFLAGS := -std=c++14 $(DEBUG)
 LDFLAGS := -L "./lib"
-#LIB := -lpyramicio -lfftw3f
-LIB := -lfftw3f #-lpyramicio 
-INC := -I include
+LIB := -lfftw3f -lpyramicio -lpthread
+INC := -I "./include"
 
 SRCDIR := src
 BUILDDIR := build
@@ -26,8 +25,12 @@ hello:
 	@echo $(OBJECTS)
 
 $(BUILDDIR)/%.o: $(SRCDIR)/%.$(SRCEXT)
+<<<<<<< HEAD
 	mkdir -p build
 	$(CC) $(LDFLAGS) $(INC) $(CPPFLAGS) -c -o $@ $< $(LIB) 
+=======
+	$(CC) $(LDFLAGS) $(INC) $(CPPFLAGS) -c -o $@ $< $(LIB)
+>>>>>>> ad5acdf5809f04e927167019e53c1cbb1eca625b
 
 $(TESTS): $(OBJECTS)
 	mkdir -p tests/bin
