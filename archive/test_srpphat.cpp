@@ -3,8 +3,8 @@
 #include <fstream>
 #include <vector>
 
-#include "../src/e3e_detection.h"
-#include "../src/srpphat.h"
+#include "e3e_detection.h"
+#include "srpphat.h"
 
 #define FFT_SIZE 128
 #define CHANNELS 8

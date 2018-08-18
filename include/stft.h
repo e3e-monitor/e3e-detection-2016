@@ -5,8 +5,8 @@
 #include <cmath>
 #include <fftw3.h>
 
-#include "../src/e3e_detection.h"
-#include "../src/windows.h"
+#include "e3e_detection.h"
+#include "windows.h"
 
 #define STFT_NO_WINDOW 0
 #define STFT_WINDOW_ANALYSIS 1

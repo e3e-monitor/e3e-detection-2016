@@ -6,8 +6,8 @@ We will use [Pyramic](https://github.com/LCAV/Pyramic) for a demo at IWAENC in T
 ### Compile and run tests
 
     make tests
-    ./tests/test_stft
-    ./tests/test_stft_speed
+    ./tests/bin/test_stft
+    ./tests/bin/test_stft_speed
 
 
 ### Use the STFT

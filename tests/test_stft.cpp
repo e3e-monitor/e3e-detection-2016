@@ -9,8 +9,8 @@
 
 #include <fftw3.h>
 
-#include "../src/e3e_detection.h"
-#include "../src/stft.h"
+#include "e3e_detection.h"
+#include "stft.h"
 
 
 // Initialize RNG with random seed
