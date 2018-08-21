@@ -14,8 +14,8 @@
 
 #include "pyramicio.h"
 
-#define NBUFFERS 4
-#define BUFFER_LEN 48000
+#define NBUFFERS 12
+#define BUFFER_LEN 256
 #define OCHANNELS 2
 #define OUT_BUFFER_SIZE (OCHANNELS * BUFFER_LEN)
 
@@ -39,12 +39,13 @@ int toggle_half(int half)
 void playback()
 {
   int i;
+  int is_pyramic_enabled = false;
 
   // Get pointer to output buffer
-  struct outputBuffer outBuf = pyramicGetOutputBuffer(p, 4 * OUT_BUFFER_SIZE);  // is the length in bytes ???
+  struct outputBuffer outBuf = pyramicGetOutputBuffer(p, 8 * BUFFER_LEN);  // 2nd arg is length in bytes (i.e., 2 buffers x 2 bytes/sample x 2 channels x buffer length)
   int16_t *out_buffers[2] = {
     outBuf.samples,
-    outBuf.samples + OUT_BUFFER_SIZE
+    outBuf.samples + 2 * BUFFER_LEN  // 1 buffer x 1 int16_t/sample x 2 channel x buffer length
   };
 
   // zero out the first buffer
@@ -61,16 +62,15 @@ void playback()
   pyramicSelectOutputSource(p, SRC_MEMORY);
   pyramicSetOutputBuffer(p, outBuf);
 
-  // synchronize
-  while (pyramicGetCurrentOutputBufferHalf(p) == current_half);
+  // wait for a couple of buffers to accumulate
+  while (q_ready.size() < NBUFFERS / 2)
+    ;
 
-
+  // start the loop
   while (is_playing)
   {
-    current_half = toggle_half(current_half);
-
     // Wait for current half to be idle
-    while (pyramicGetCurrentOutputBufferHalf(p) == current_half)
+    while (is_pyramic_enabled && pyramicGetCurrentOutputBufferHalf(p) == current_half)
       ;
 
     if (!q_ready.empty())
@@ -80,12 +80,19 @@ void playback()
       for (i = 0 ; i < OUT_BUFFER_SIZE ; i++)
         out_buffers[current_half-1][i] = buffer[i];
       q_empty.push(buffer);
+
+      if (not is_pyramic_enabled)
+      {
+        pyramicEnableOutput(p, true);
+        is_pyramic_enabled = true;
+      }
     }
     else
     {
       printf("Buffer underflow at playback\n");
     }
 
+    current_half = toggle_half(current_half);
   }
     
   // zero out the output buffer at the end
@@ -98,7 +105,7 @@ void playback()
 int main(void)
 {
   uint32_t i;
-  int current_half = 2;
+  int current_half = 1;
   int16_t *input_buffers[2];
   int16_t *buffer;
 
@@ -116,22 +123,18 @@ int main(void)
 		pyramicStartCapture(p, 2 * BUFFER_LEN);
     struct inputBuffer inBuf = pyramicGetInputBuffer(p, 0); // 0 for 1st half, actually a pointer to the whole buffer
     input_buffers[0] = inBuf.samples;
-    input_buffers[1] = inBuf.samples + 48 * BUFFER_LEN;
+    input_buffers[1] = inBuf.samples + inBuf.microphoneCount * BUFFER_LEN;
 
     // Start the playback too
     std::thread playback_thread(playback);
 
-    // necessary to sync ?
-    while (pyramicGetCurrentBufferHalf(p) == current_half) {}
-    current_half = toggle_half(current_half);
-
     int n = 0;
-    int nmax = (int)(10. * 48000 / BUFFER_LEN);
+    int nmax = (int)(20. * 48000 / BUFFER_LEN);
     while (n < nmax)
     {
-      // Wait until 1st half of buffer is idle
+      // Wait while current buffer is busy
       while(pyramicGetCurrentBufferHalf(p) == current_half)
-        ;
+        usleep(200);
 
       if (!q_empty.empty())
       {

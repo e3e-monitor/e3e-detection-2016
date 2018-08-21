@@ -1,7 +1,11 @@
+#
+# Makefile to compile the pyramic demo and tests
+#
+# Author: Robin Scheibler
 
 CC := g++
-DEBUG := -g #-Wall
-SPEEDFLAGS := -O3 -mcpu=cortex-a9 -ftree-vectorize -funroll-loops -ftree-loop-ivcanon -mfloat-abi=hard #-mfpu=neon-vfpv4 #
+DEBUG := -g -Wall
+SPEEDFLAGS=-O3 -ffast-math -ftree-vectorize -funroll-loops # -mcpu=cortex-a9 -ftree-loop-ivcanon -mfloat-abi=hard
 #CPPFLAGS := -std=c++14 -lfftw3f $(SPEEDFLAGS)
 CPPFLAGS := -std=c++14 $(DEBUG)
 LDFLAGS := -L "./lib"
@@ -12,12 +16,21 @@ SRCDIR := src
 BUILDDIR := build
 
 SRCEXT := cpp
-SOURCES := $(shell find $(SRCDIR) -type f | grep \.$(SRCEXT)) #stft.cpp srpphat.cpp windows.cpp
+SOURCES := $(shell find $(SRCDIR) -type f | grep \.$(SRCEXT)$$) #stft.cpp srpphat.cpp windows.cpp
 OBJECTS := $(patsubst $(SRCDIR)/%,$(BUILDDIR)/%,$(SOURCES:.$(SRCEXT)=.o))
-TESTS := $(shell find tests -type f | grep \.$(SRCEXT) | cut -f 1 -d '.' | xargs basename -a)
+TESTS := $(shell find tests -type f | grep \.$(SRCEXT)$$ | cut -f 1 -d '.' | xargs basename -a)
+
+hello:
+	@echo $(TESTS)
+	@echo $(OBJECTS)
 
 $(BUILDDIR)/%.o: $(SRCDIR)/%.$(SRCEXT)
+<<<<<<< HEAD
+	mkdir -p build
+	$(CC) $(LDFLAGS) $(INC) $(CPPFLAGS) -c -o $@ $< $(LIB) 
+=======
 	$(CC) $(LDFLAGS) $(INC) $(CPPFLAGS) -c -o $@ $< $(LIB)
+>>>>>>> ad5acdf5809f04e927167019e53c1cbb1eca625b
 
 $(TESTS): $(OBJECTS)
 	mkdir -p tests/bin
