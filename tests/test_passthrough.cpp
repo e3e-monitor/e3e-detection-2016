@@ -28,7 +28,7 @@ std::queue<int16_t *> q_empty;  // store unused buffers
 int16_t buffers[NBUFFERS][OUT_BUFFER_SIZE];
 int is_playing = false;
 
-uint32_t toggle_half(uint32_t half)
+uint32_t toggle_half_pt(uint32_t half)
 { 
   if (half == 1)
     return 2;
@@ -97,7 +97,7 @@ void playback()
       printf("Buffer underflow at playback\n");
     }
 
-    current_half = toggle_half(current_half);
+    current_half = toggle_half_pt(current_half);
   }
     
   // zero out the output buffer at the end
@@ -157,7 +157,7 @@ int main(void)
         printf("Buffer overflow at reading\n");
       }
 
-      current_half = toggle_half(current_half);
+      current_half = toggle_half_pt(current_half);
 
       n++;
     }

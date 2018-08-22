@@ -28,7 +28,7 @@ struct pyramic *p = NULL;
 // Create a queue to store output frames
 int is_playing = false;
 
-uint32_t toggle_half(uint32_t half)
+uint32_t toggle_half_output(uint32_t half)
 { 
   if (half == 1)
     return 2;
@@ -97,7 +97,7 @@ void playback()
           usleep(50);
       }
 
-      current_half = toggle_half(current_half);
+      current_half = toggle_half_output(current_half);
     }
     
     // Stop output

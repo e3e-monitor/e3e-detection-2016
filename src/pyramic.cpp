@@ -14,8 +14,8 @@ Pyramic::Pyramic(int _num_samples)
 {
   int i;
 
-  this->read_buffer_size = CHANNELS_IN * this->num_samples;
-  this->play_buffer_size = CHANNELS_OUT * this->num_samples;
+  this->read_buffer_size = PYRAMIC_CHANNELS_IN * this->num_samples;
+  this->play_buffer_size = PYRAMIC_CHANNELS_OUT * this->num_samples;
 
   for (i = 0 ; i < N_BUFFERS ; i++)
   {
@@ -146,7 +146,7 @@ void Pyramic::player()
   pyramicSetOutputBuffer(this->p, outBuf);  // configure the buffer pointer and size
 
   // wait for a couple of buffers to accumulate
-  while (this->q_play_ready.size() <= PLAY_MIN_BUF_IN_Q)
+  while (this->q_play_ready.size() < PLAY_MIN_BUF_IN_Q)
     usleep(50);
 
   // start the loop

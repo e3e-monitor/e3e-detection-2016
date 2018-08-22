@@ -1,3 +1,6 @@
+#ifndef __PYRAMIC_H__
+#define __PYRAMIC_H__
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -8,13 +11,13 @@
 
 #include "pyramicio.h"
 
-#define CHANNELS_IN 48
-#define CHANNELS_OUT 2
-#define SAMPLERATE 48000
+#define PYRAMIC_CHANNELS_IN 48
+#define PYRAMIC_CHANNELS_OUT 2
+#define PYRAMIC_SAMPLERATE 48000
 
 // We wait until a sufficient number of ready buffers are available before
 // starting playback
-#define PLAY_MIN_BUF_IN_Q 2
+#define PLAY_MIN_BUF_IN_Q 3
 
 // Number of buffers to use in the circular queues
 #define N_BUFFERS 4
@@ -60,9 +63,9 @@ class Pyramic
     void stop();
 
     inline size_t n_samples() { return num_samples; }
-    inline size_t channels_in() { return CHANNELS_IN; }
-    inline size_t channels_out() { return CHANNELS_OUT; }
-    inline size_t samplerate() { return SAMPLERATE; }
+    inline size_t channels_in() { return PYRAMIC_CHANNELS_IN; }
+    inline size_t channels_out() { return PYRAMIC_CHANNELS_OUT; }
+    inline size_t samplerate() { return PYRAMIC_SAMPLERATE; }
 
     inline bool read_available()
     {
@@ -112,3 +115,5 @@ class Pyramic
     void reader();
     void player();
 };
+
+#endif // __PYRAMIC_H__
