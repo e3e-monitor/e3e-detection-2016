@@ -7,9 +7,9 @@ CC := g++
 DEBUG := -g -Wall
 SPEEDFLAGS=-O3 -ffast-math -ftree-vectorize -funroll-loops # -mcpu=cortex-a9 -ftree-loop-ivcanon -mfloat-abi=hard
 #CPPFLAGS := -std=c++14 -lfftw3f $(SPEEDFLAGS)
-CPPFLAGS := -std=c++14 $(DEBUG)
+CPPFLAGS := -std=c++14 $(DEBUG) 
 LDFLAGS := -L "./lib"
-LIB := -lfftw3f -lpyramicio -lpthread
+LIB := -lfftw3f -lpyramicio -pthread
 INC := -I "./include"
 
 SRCDIR := src
@@ -26,11 +26,11 @@ hello:
 
 $(BUILDDIR)/%.o: $(SRCDIR)/%.$(SRCEXT)
 	mkdir -p build
-	$(CC) $(LDFLAGS) $(INC) $(CPPFLAGS) -c -o $@ $< $(LIB) 
+	$(CC) -c -o $@ $< $(LDFLAGS) $(INC) $(LIB) $(CPPFLAGS)
 
 $(TESTS): $(OBJECTS)
 	mkdir -p tests/bin
-	$(CC) $(LDFLAGS) $(INC) $(CPPFLAGS) tests/$@.cpp -o tests/bin/$@ $^ $(LIB)
+	$(CC) tests/$@.cpp -o tests/bin/$@ $^ $(LDFLAGS) $(INC) $(LIB) $(CPPFLAGS)
 
 tests: $(TESTS)
 

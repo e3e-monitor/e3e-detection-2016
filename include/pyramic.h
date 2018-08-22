@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <thread>
+#include <mutex>
 #include <queue>
 #include <vector>
 
@@ -43,6 +44,10 @@ class Pyramic
     // The FIFOs to keep all the buffers
     buffer_t read_buffers[N_BUFFERS];
     buffer_t play_buffers[N_BUFFERS];
+    std::mutex mutex_read_ready; // protects read queue
+    std::mutex mutex_read_empty; // protects read queue
+    std::mutex mutex_play_ready; // protects play queue
+    std::mutex mutex_play_empty; // protects play queue
     std::queue<buffer_t *> q_read_ready;  // store buffers ready to be played
     std::queue<buffer_t *> q_read_empty;  // store unused buffers
     std::queue<buffer_t *> q_play_ready;  // store buffers ready to be played
@@ -59,27 +64,51 @@ class Pyramic
     inline size_t channels_out() { return CHANNELS_OUT; }
     inline size_t samplerate() { return SAMPLERATE; }
 
-    inline bool read_available() { return !this->q_read_ready.empty(); }
+    inline bool read_available()
+    {
+      bool ret;
+      this->mutex_read_ready.lock();
+      ret = !this->q_read_ready.empty();
+      this->mutex_read_ready.unlock();
+      return ret;
+    }
     inline buffer_t &read_pop()
     {
-      buffer_t *buf = this->q_read_ready.front();
+      this->mutex_read_ready.lock();
+      buffer_t &buf = *this->q_read_ready.front();
       this->q_read_ready.pop();
-      return *buf;
+      this->mutex_read_ready.unlock();
+      return buf;
     }
-    inline void read_push(buffer_t &buf) { this->q_read_empty.push(&buf); }
+    inline void read_push(buffer_t &buf) {
+      this->mutex_read_empty.lock();
+      this->q_read_empty.push(&buf);
+      this->mutex_read_empty.unlock();
+    }
 
-    inline bool play_available() { return !this->q_play_empty.empty(); }
+    inline bool play_available()
+    {
+      bool ret;
+      this->mutex_play_empty.lock();
+      ret = !this->q_play_empty.empty();
+      this->mutex_play_empty.unlock();
+      return ret;
+    }
     inline buffer_t &play_pop()
     {
-      buffer_t *buf = this->q_play_empty.front();
+      this->mutex_play_empty.lock();
+      buffer_t &buf = *this->q_play_empty.front();
       this->q_play_empty.pop();
-      return *buf;
+      this->mutex_play_empty.unlock();
+      return buf;
     }
-    inline void play_push(buffer_t &buf) { this->q_play_ready.push(&buf); }
+    inline void play_push(buffer_t &buf) {
+      this->mutex_play_ready.lock();
+      this->q_play_ready.push(&buf);
+      this->mutex_play_ready.unlock();
+    }
 
-
-
-
+    // The functions to be launched in threads
     void reader();
     void player();
 };

@@ -44,8 +44,9 @@ int Pyramic::start()
     this->flag_is_running = true;
 
     // start reader and player threads
-    this->read_thread = std::thread(&Pyramic::reader, this);
     this->play_thread = std::thread(&Pyramic::player, this);
+    this->read_thread = std::thread(&Pyramic::reader, this);
+
 
     return 1;  // success
   }
@@ -80,7 +81,7 @@ void Pyramic::reader()
 
   // the double buffer
   input_buffers[0] = inBuf.samples;
-  input_buffers[1] = inBuf.samples + inBuf.microphoneCount * this->read_buffer_size;
+  input_buffers[1] = inBuf.samples + this->read_buffer_size;
 
   // start the infinite loop
   while (this->flag_is_running)
@@ -89,21 +90,26 @@ void Pyramic::reader()
     while(pyramicGetCurrentBufferHalf(p) == current_half)
       usleep(50);
 
+    this->mutex_read_empty.lock();
     if (!this->q_read_empty.empty())
     {
       // get an empty buffer from the queue
       buffer_t &buffer = *(this->q_read_empty.front());
       this->q_read_empty.pop();
+      this->mutex_read_empty.unlock();
 
       // fill it
       for (i = 0 ; i < this->read_buffer_size ; i++)
         buffer[i] = input_buffers[current_half-1][i];
 
       // put it in the other queue
+      this->mutex_read_ready.lock();
       this->q_read_ready.push(&buffer);
+      this->mutex_read_ready.unlock();
     }
     else
     {
+      this->mutex_read_empty.unlock();
       printf("Buffer overflow at reading\n");
     }
 
@@ -120,7 +126,7 @@ void Pyramic::player()
   uint32_t current_half = 1;
 
   // make sure the playback module is off at the beginning
-  pyramicEnableOutput(this->p, 1);
+  pyramicEnableOutput(this->p, 0);
 
   // Get pointer to output buffer
   struct outputBuffer outBuf = pyramicGetOutputBuffer(this->p, 4 * this->play_buffer_size);  // 2nd arg is length in bytes (i.e., 2 buffers x 2 bytes/sample)
@@ -140,7 +146,7 @@ void Pyramic::player()
   pyramicSetOutputBuffer(this->p, outBuf);  // configure the buffer pointer and size
 
   // wait for a couple of buffers to accumulate
-  while (this->q_play_ready.size() < PLAY_MIN_BUF_IN_Q)
+  while (this->q_play_ready.size() <= PLAY_MIN_BUF_IN_Q)
     usleep(50);
 
   // start the loop
@@ -150,18 +156,22 @@ void Pyramic::player()
     while (pyramicGetCurrentOutputBufferHalf(this->p) == current_half)
       usleep(50);
 
+    this->mutex_play_ready.lock();
     if (!this->q_play_ready.empty())
     {
       // get a buffer ready to play
       buffer_t &buffer = *(this->q_play_ready.front());
       this->q_play_ready.pop();
+      this->mutex_play_ready.unlock();
 
       // copy it to the output buffer
       for (i = 0 ; i < this->play_buffer_size ; i++)
         out_buffers[current_half-1][i] = buffer[i];
 
       // put back the used buffer in the queue
+      this->mutex_play_empty.lock();
       this->q_play_empty.push(&buffer);
+      this->mutex_play_empty.unlock();
 
       // enable the Pyramic playback module if needed
       if (pyramicGetCurrentOutputBufferHalf(this->p) == 0)
@@ -175,6 +185,7 @@ void Pyramic::player()
     }
     else
     {
+      this->mutex_play_ready.unlock();
       // fill with zeros when nothing is available
       for (i = 0 ; i < this->play_buffer_size ; i++)
         out_buffers[current_half-1][i] = 0;
