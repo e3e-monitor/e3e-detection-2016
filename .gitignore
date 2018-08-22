@@ -4,6 +4,10 @@ lib/*
 
 # Ignore any executables
 bin/*
+tests/bin/*
+
+# junk files
+*.swp
 
 # Ignore Mac specific files
 .DS_Store
