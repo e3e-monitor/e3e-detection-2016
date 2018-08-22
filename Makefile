@@ -9,7 +9,7 @@ SPEEDFLAGS=-O3 -ffast-math -ftree-vectorize -funroll-loops # -mcpu=cortex-a9 -ft
 #CPPFLAGS := -std=c++14 -lfftw3f $(SPEEDFLAGS)
 CPPFLAGS := -std=c++14 $(DEBUG) 
 LDFLAGS := -L "./lib"
-LIB := -lfftw3f -lpyramicio -pthread
+LIB := -lfftw3f -lpyramicio -lpthread
 INC := -I "./include"
 
 SRCDIR := src
