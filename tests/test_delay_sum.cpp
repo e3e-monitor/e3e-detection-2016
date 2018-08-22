@@ -51,7 +51,7 @@ void compute_beamforming_weights()
 
   for (size_t n = 0 ; n < NUM_SAMPLES ; n++)
     for (size_t ch = 0 ; ch < PYRAMIC_CHANNELS_IN ; ch++)
-      beamformer[n * PYRAMIC_CHANNELS_IN + ch] = std::exp(-j * omega * delays[ch]) / denom;
+      beamformer[n * PYRAMIC_CHANNELS_IN + ch] = std::exp(-j * omega * delays[ch]) * denom;
 }
 
 /*****************************/
@@ -95,12 +95,18 @@ void processing(buffer_t &input, buffer_t &output)
 
   for (size_t n = 0 ; n < NUM_SAMPLES ; n++)
   {
+    // adjust volume
+    buffer_out[n] *= 8.;
+
+    // clip
     if (buffer_out[n] > 1)
       output[2*n] = float2int;
     else if (buffer_out[n] < -1)
       output[2*n] = -float2int;
     else
       output[2*n] = (int16_t)(float2int * buffer_out[n]);
+
+    // copy second channel
     output[2*n+1] = output[2*n];
   }
 
