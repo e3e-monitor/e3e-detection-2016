@@ -10,8 +10,9 @@ import numpy as np
 import samplerate
 from scipy.io import wavfile
 import pyroomacoustics as pra
+import matplotlib.pyplot as plt
 
-from match_response import MatchResponse
+from shape_response import ShapeResponse
 
 fs = 16000
 c = pra.constants.get('c')
@@ -34,7 +35,7 @@ source_files = [
 source_delays = [ 0., 1.5, 3.4, 7.5, 0. ]
 source_powers = [1., 1., 1., 1., 0.1]
 source_mask = [1, 1, 1, 1, 1]
-nfft = 384
+nfft = 512
 shift = nfft // 2
 
 
@@ -65,6 +66,7 @@ room = pra.ShoeBox(
         fs=fs,
         absorption=0.25,
         max_order=25,
+        sigma2_awgn=1e-5,
         )
 
 # Read in the pyramic microphone locations
@@ -122,7 +124,7 @@ look_dir = np.array(source_locations[0]) - np.mean(array, axis=1)
 look_dir /= np.linalg.norm(look_dir)
 
 # the matched response beamformer
-mrbf = MatchResponse(array, look_dir, 20, 32, nfft, fs, c)
+mrbf = ShapeResponse(array, look_dir, 60, 64, nfft, fs, c)
 
 # processing loop
 n = 0
@@ -138,5 +140,9 @@ while n + shift < recording.shape[0]:
 
     n += shift
 
-wavfile.write('output_mic1.wav', fs, pra.normalize(recording[:,0]) * 0.85)
-wavfile.write('output_mf.wav', fs, pra.normalize(output_signal) * 0.85)
+mrbf.plot()
+
+m = 0.85 / np.max(np.abs(recording[:,0]))
+
+wavfile.write('output_mic1.wav', fs, recording[:,0] * m)
+wavfile.write('output_sr.wav', fs, output_signal * m)
