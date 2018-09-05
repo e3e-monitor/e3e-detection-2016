@@ -139,7 +139,7 @@ class MatchResponse:
         assert X.shape[1] == self.array.shape[1]
         output = np.zeros(self.nfft // 2 + 1, dtype=X.dtype)
 
-        # compute correlation with steering vectors
+        # compute correlation with steering vectors. CHeck how many steering vectors we can afford
         cc = np.mean(X[None,:,:] * np.conj(self.steering_vectors), axis=2)  # (n_dir, n_freq)
         cc_norm = np.mean(X[None,:,:] / (1e-7 + np.abs(X)) * np.conj(self.steering_vectors), axis=2)  # (n_dir, n_freq)
 
