@@ -33,9 +33,9 @@ source_files = [
         'fan_noise_short.wav',
         ]
 source_delays = [ 0., 1.5, 3.4, 7.5, 0. ]
-source_powers = [1., 1., 1., 1., 0.1]
+source_powers = [1., 1., 1., 1., 0.01]
 source_mask = [1, 1, 1, 1, 1]
-nfft = 512
+nfft = 256
 shift = nfft // 2
 
 
