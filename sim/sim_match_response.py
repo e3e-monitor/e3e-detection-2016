@@ -138,5 +138,8 @@ while n + shift < recording.shape[0]:
 
     n += shift
 
-wavfile.write('output_mic1.wav', fs, pra.normalize(recording[:,0]) * 0.85)
-wavfile.write('output_mf.wav', fs, pra.normalize(output_signal) * 0.85)
+m = 0.85 / np.max(np.abs(recording[:,0]))
+wavfile.write('output_mic1.wav', fs, recording[:,0] * m)
+wavfile.write('output_mf.wav', fs, output_signal * m)
+
+mrbf.plot()

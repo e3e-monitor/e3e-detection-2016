@@ -1,5 +1,37 @@
 import numpy as np
 
+class Plottable(object):
+    '''
+    A simple base class that allows to store frames in a frame processing
+    process so that they can be plotted at the end. This is useful for debbuging.
+    '''
+
+    def __init__(self):
+        self.data = {}
+
+    def store(self, name, data):
+        ''' Store some data for later plotting '''
+
+        if name in self.data:
+            self.data[name].append(data)
+        else:
+            self.data[name] = [data]
+
+
+    def plot(self):
+        ''' Plot debugging data '''
+        import matplotlib.pyplot as plt
+
+        for name, a in self.data.items():
+            plt.figure()
+            plt.title(name)
+            plt.xlabel('Time')
+            plt.ylabel('Frequency')
+            plt.imshow(np.array(a).T, origin='lower', aspect='auto')
+            plt.colorbar()
+        plt.show()
+
+
 class ShortTimeAverage(object):
     '''
     A class that simplifies doing short time averaging

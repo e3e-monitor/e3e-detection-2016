@@ -3,9 +3,9 @@ from scipy.signal import medfilt
 import numpy as np
 import pyroomacoustics as pra
 
-from utilities import ShortTimeAverage
+from utilities import ShortTimeAverage, Plottable
 
-class ShapeResponse:
+class ShapeResponse(Plottable):
 
     def __init__(self, array, look_dir, beam_width, n_dir, nfft, fs, c):
         '''
@@ -28,6 +28,8 @@ class ShapeResponse:
         c: float
             The speed of sound
         '''
+
+        Plottable.__init__(self)  # parent constructor
 
         self.array = array
         self.array -= array[:,0,None]
@@ -61,8 +63,6 @@ class ShapeResponse:
         delays = np.dot(self.grid.T, self.array) / c  # shape: (n_dir, n_channels,)
         self.steering_vectors = np.exp(2j * np.pi * delays[:,None,:] * self.f_hertz[None,:,None])  # (n_dir, n_freq, n_channels,)
         self.gain_values = self.gain(self.grid.T)
-
-        self.data = {}
 
         # used for xcorr short time averaging
         self.estimation_len = 5  # number of frames to use in short time average
@@ -165,30 +165,6 @@ class ShapeResponse:
             return self.frame_pipe.pop()
         else:
             return np.zeros(self.nfft // 2 + 1, dtype=X.dtype)
-
-
-    def store(self, name, data):
-        ''' Store some data for later plotting '''
-
-        if name in self.data:
-            self.data[name].append(data)
-        else:
-            self.data[name] = [data]
-
-
-    def plot(self):
-        ''' Plot debugging data '''
-        import matplotlib.pyplot as plt
-
-        for name, a in self.data.items():
-            plt.figure()
-            plt.title(name)
-            plt.xlabel('Time')
-            plt.ylabel('Frequency')
-            plt.imshow(np.array(a).T, origin='lower', aspect='auto')
-            plt.colorbar()
-        plt.show()
-
 
     def _compute_diffuse_coef(self, cc):
 

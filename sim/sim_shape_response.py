@@ -35,7 +35,7 @@ source_files = [
 source_delays = [ 0., 1.5, 3.4, 7.5, 0. ]
 source_powers = [1., 1., 1., 1., 0.01]
 source_mask = [1, 1, 1, 1, 1]
-nfft = 256
+nfft = 1024
 shift = nfft // 2
 
 
@@ -140,9 +140,8 @@ while n + shift < recording.shape[0]:
 
     n += shift
 
-mrbf.plot()
-
 m = 0.85 / np.max(np.abs(recording[:,0]))
-
 wavfile.write('output_mic1.wav', fs, recording[:,0] * m)
 wavfile.write('output_sr.wav', fs, output_signal * m)
+
+mrbf.plot()

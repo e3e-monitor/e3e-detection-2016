@@ -3,6 +3,8 @@ from scipy.signal import medfilt
 import numpy as np
 import pyroomacoustics as pra
 
+from utilities import Plottable
+
 def align_matrix(vec, ref):
     '''
     This routine will return the rotation matrix
@@ -48,7 +50,7 @@ def align_matrix(vec, ref):
         return I + V + V2 * (1 - c) / s
 
 
-class MatchResponse:
+class MatchResponse(Plottable):
 
     def __init__(self, array, look_dir, beam_width, n_dir, nfft, fs, c):
         '''
@@ -71,6 +73,8 @@ class MatchResponse:
         c: float
             The speed of sound
         '''
+
+        Plottable.__init__(self)  # parent constructor
 
         self.array = array
         self.array -= np.mean(array, axis=1, keepdims=True)
@@ -121,7 +125,7 @@ class MatchResponse:
         delays = np.dot(grid.T, self.array) / c  # shape: (n_dir, n_channels,)
         self.steering_vectors = np.exp(2j * np.pi * delays[:,None,:] * self.f_hertz[None,:,None])  # (n_dir, n_freq, n_channels,)
 
-        self.gamma_diffuse = 0.1
+        self.gamma_diffuse = 0.01
         self.gamma_direct = 0.001
 
 
@@ -149,6 +153,8 @@ class MatchResponse:
 
         diffuse = np.sum(cc[self.look_I,:] * self.response[self.look_I,None], axis=0)
 
+        rat_arr = []
+
         for f, (n, f_hz,) in enumerate(zip(dir_index, self.f_hertz)):
 
             # estimate proportion of direct and diffuse component
@@ -158,11 +164,15 @@ class MatchResponse:
             elif ratio < 0.:
                 ratio = 0.
 
+            rat_arr.append(ratio)
+
             if n in self.look_I:
                 output[f] = ratio * cc[n,f] * self.response[n] + (1. - ratio) * self.gamma_diffuse * diffuse[f]
             else:
                 c = (1 - ratio) * (self.gamma_diffuse - self.gamma_direct) + self.gamma_direct
                 output[f] = c * diffuse[f]
+
+        self.store('ratio', np.array(rat_arr))
 
         # high pass filter
         output[0] = 0.
@@ -170,5 +180,7 @@ class MatchResponse:
         output[2] *= 0.5
         output[3] *= 0.7
         output[4] *= 0.9
+
+        self.store('output', 20 * np.log10(np.abs(output) + 1e-7))
 
         return output
