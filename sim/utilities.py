@@ -6,11 +6,11 @@ class Plottable(object):
     process so that they can be plotted at the end. This is useful for debbuging.
     '''
 
-    def __init__(self):
-        self.data = {}
-
     def store(self, name, data):
         ''' Store some data for later plotting '''
+
+        if 'data' not in self.__dict__:
+            self.data = {}
 
         if name in self.data:
             self.data[name].append(data)
@@ -20,16 +20,19 @@ class Plottable(object):
 
     def plot(self):
         ''' Plot debugging data '''
-        import matplotlib.pyplot as plt
 
-        for name, a in self.data.items():
-            plt.figure()
-            plt.title(name)
-            plt.xlabel('Time')
-            plt.ylabel('Frequency')
-            plt.imshow(np.array(a).T, origin='lower', aspect='auto')
-            plt.colorbar()
-        plt.show()
+        if 'data' in self.__dict__:
+
+            import matplotlib.pyplot as plt
+
+            for name, a in self.data.items():
+                plt.figure()
+                plt.title(name)
+                plt.xlabel('Time')
+                plt.ylabel('Frequency')
+                plt.imshow(np.array(a).T, origin='lower', aspect='auto')
+                plt.colorbar()
+            plt.show()
 
 
 class ShortTimeAverage(object):
@@ -49,6 +52,7 @@ class ShortTimeAverage(object):
         self.buf = []
         self.sum = None
         self.val = None
+
         self.f = func
         self.L = L
 

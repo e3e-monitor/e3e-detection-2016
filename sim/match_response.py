@@ -3,7 +3,7 @@ from scipy.signal import medfilt
 import numpy as np
 import pyroomacoustics as pra
 
-from utilities import Plottable
+from utilities import ShortTimeAverage, Plottable
 
 def align_matrix(vec, ref):
     '''
@@ -74,10 +74,9 @@ class MatchResponse(Plottable):
             The speed of sound
         '''
 
-        Plottable.__init__(self)  # parent constructor
-
         self.array = array
-        self.array -= np.mean(array, axis=1, keepdims=True)
+        #self.array -= np.mean(array, axis=1, keepdims=True)
+        self.array -= array[:,0,None]
         self.look_dir = look_dir / np.linalg.norm(look_dir)  # ensure unit vector
         self.beta = np.radians(beam_width)
         self.n_dir = n_dir
@@ -123,10 +122,29 @@ class MatchResponse(Plottable):
         # steering vectors have shaped (n_dir, n_freq, n_channels)
         self.f_hertz = np.arange(nfft // 2 + 1) / nfft * fs  # shape (n_freq,)
         delays = np.dot(grid.T, self.array) / c  # shape: (n_dir, n_channels,)
-        self.steering_vectors = np.exp(2j * np.pi * delays[:,None,:] * self.f_hertz[None,:,None])  # (n_dir, n_freq, n_channels,)
+        self.steering_vectors = np.exp(-2j * np.pi * delays[:,None,:] * self.f_hertz[None,:,None])  # (n_dir, n_freq, n_channels,)
+
+        # correlation of microphones in diffuse noise
+        mic_dist = np.linalg.norm(self.array[:,1:], axis=0, keepdims=True)
+        self.cc_diff = np.sinc(2. * np.pi * self.f_hertz[:,None] * mic_dist / self.c)  # (n_freq, n_channel - 1)
 
         self.gamma_diffuse = 0.01
         self.gamma_direct = 0.001
+        
+        self.estimation_len = 5
+        self.estimates = {
+                'cross_prod' : ShortTimeAverage(
+                    self.estimation_len, 
+                    lambda X : X[1:,0,None] * np.conj(X[1:,1:]) ,
+                    ),
+                'var' : ShortTimeAverage(
+                    self.estimation_len,
+                    lambda X : X[1:,:] * np.conj(X[1:,:]),
+                    ),
+                }
+
+        self.frame_delay = self.estimation_len // 2
+        self.frame_pipe = []
 
 
     def process(self, X):
@@ -143,36 +161,40 @@ class MatchResponse(Plottable):
         assert X.shape[1] == self.array.shape[1]
         output = np.zeros(self.nfft // 2 + 1, dtype=X.dtype)
 
-        # compute correlation with steering vectors
-        cc = np.mean(X[None,:,:] * np.conj(self.steering_vectors), axis=2)  # (n_dir, n_freq)
-        cc_norm = np.mean(X[None,:,:] / (1e-7 + np.abs(X)) * np.conj(self.steering_vectors), axis=2)  # (n_dir, n_freq)
+        # update all short time averages
+        for name, v in self.estimates.items():
+            v.update(X)
 
-        # Find the maximum direction at each frequency
-        dir_index = np.argmax(np.abs(cc), axis=0)
+        # I believe for this, we should use a short time average, not instantaneous
+        # compute correlation between channel 1 and other microphones
+        cross_prod = self.estimates['cross_prod'].get()
+        var = self.estimates['var'].get()
+        a_avg = cross_prod / (var[:,1:] + 1e-7) # (n_freq - 1, n_chan - 1)
+        cc = np.sqrt(var[:,1:] / (var[:,0,None] + 1e-7)) * a_avg
+
+        # diffuse noise gain:
+        ratio = self._compute_diffuse_coef(cc)
+        alpha = 0.5
+        ratio = np.maximum(0., ratio - alpha) / (1. - alpha)  # not sure why I need to adjust like this.
+        self.store('dir/diff ratio', ratio)
+        c = ratio * (1 - self.gamma_diffuse) + self.gamma_diffuse
+
+        # compute correlation with steering vectors
+        bf_ds = np.mean(X[None,1:,:] * self.steering_vectors[:,1:,:], axis=2)  # (n_dir, n_freq)
+
+        # Find the maximum direction at each frequency (DOA)
+        dir_index = np.argmax(np.abs(bf_ds), axis=0)
         dir_index = medfilt(dir_index, 5).astype(np.int)
 
-        diffuse = np.sum(cc[self.look_I,:] * self.response[self.look_I,None], axis=0)
-
-        rat_arr = []
+        diffuse = np.sum(bf_ds[self.look_I,:] * self.response[self.look_I,None], axis=0)
 
         for f, (n, f_hz,) in enumerate(zip(dir_index, self.f_hertz)):
 
-            # estimate proportion of direct and diffuse component
-            ratio = (np.abs(cc_norm[n,f]) - (1 / np.sqrt(X.shape[1]))) / (1 - 1 / np.sqrt(X.shape[1]))
-            if np.abs(ratio) > 1.:
-                ratio = 1.
-            elif ratio < 0.:
-                ratio = 0.
-
-            rat_arr.append(ratio)
-
             if n in self.look_I:
-                output[f] = ratio * cc[n,f] * self.response[n] + (1. - ratio) * self.gamma_diffuse * diffuse[f]
+                output[f] = ratio[f] * bf_ds[n,f] * self.response[n] + (1. - ratio[f]) * self.gamma_diffuse * diffuse[f]
             else:
-                c = (1 - ratio) * (self.gamma_diffuse - self.gamma_direct) + self.gamma_direct
+                c = (1 - ratio[f]) * (self.gamma_diffuse - self.gamma_direct) + self.gamma_direct
                 output[f] = c * diffuse[f]
-
-        self.store('ratio', np.array(rat_arr))
 
         # high pass filter
         output[0] = 0.
@@ -181,6 +203,47 @@ class MatchResponse(Plottable):
         output[3] *= 0.7
         output[4] *= 0.9
 
-        self.store('output', 20 * np.log10(np.abs(output) + 1e-7))
+        # We might want to delay by a few frames
+        self.frame_pipe.insert(0, output)
+        if len(self.frame_pipe) > self.frame_delay:
+            return self.frame_pipe.pop()
+        else:
+            return np.zeros(self.nfft // 2 + 1, dtype=X.dtype)
 
-        return output
+
+
+    def _compute_diffuse_coef(self, cc):
+
+        diff_coef = []
+
+        for f in range(1, self.nfft // 2 + 1):
+            v_dir = np.ones(self.cc_diff[f,:].shape)
+            v_diff = np.abs(self.cc_diff[f,:])
+            v_test = np.abs(cc[f-1,:])
+
+            A = np.linalg.norm(v_dir - v_test)
+            B = np.linalg.norm(v_test - v_diff)
+            C = np.linalg.norm(v_dir - v_diff)
+
+            # Area using Heron's formula
+            s = 0.5 * (A + B + C)
+            area = np.sqrt(s * (s - A) * (s - B) * (s - C))
+
+            # height
+            H = 2 * area / C
+
+            C1 = np.sqrt(B ** 2 - H ** 2)
+            C2 = np.sqrt(A ** 2 - H ** 2)
+
+            if C2 > C:
+                r = 0.
+            elif C1 > C:
+                r = 1.
+            else:
+                r = C1 / C
+
+            diff_coef.append(r)
+
+        return np.array(diff_coef)
+
+        

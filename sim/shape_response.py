@@ -29,8 +29,6 @@ class ShapeResponse(Plottable):
             The speed of sound
         '''
 
-        Plottable.__init__(self)  # parent constructor
-
         self.array = array
         self.array -= array[:,0,None]
         self.look_dir = look_dir / np.linalg.norm(look_dir)  # ensure unit vector

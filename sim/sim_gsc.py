@@ -10,7 +10,7 @@ import numpy as np
 from scipy.io import wavfile
 import pyroomacoustics as pra
 
-from gsc import calibration, project_null
+from gsc import calibration, project_null, GSC
 
 fs = 16000
 room_size = [9.9, 7.5, 3.1]
@@ -121,14 +121,9 @@ recording = room.mic_array.signals.T
 ###############
 # Run the GSC #
 
+gsc = GSC(room.mic_array.signals.T, step_size, pb_ff, nfft)
+
 output_signal = np.zeros(recording.shape[0], dtype=recording.dtype)
-
-# gsc adaptive weights
-adaptive_weights = np.zeros_like(fixed_weights)
-
-# projection back weights
-pb_den = np.ones(fixed_weights.shape[0], dtype=fixed_weights.dtype)
-pb_num = np.ones(fixed_weights.shape[0], dtype=np.float)
 
 # processing loop
 n = 0
@@ -137,27 +132,14 @@ while n + shift < recording.shape[0]:
     newframe = recording[n:n+shift,:]
     X = stft_input.analysis(newframe)
 
-    # the fixed branch of the GSC
-    out_fixed_bf = np.sum(np.conj(fixed_weights) * X, axis=1)
-
-    # Now run the online projection back (seems more natural to do it on the fixed branch)
-    pb_den = pb_ff * pb_den + (1 - pb_ff) * np.conj(out_fixed_bf) * X[:,0]
-    pb_num = pb_ff * pb_num + (1 - pb_ff) * np.conj(out_fixed_bf) * out_fixed_bf
-    out_fixed_bf *= (pb_den / pb_num)
-
-    # the adaptive branch of the GSC
-    noise_ss_signal = project_null(X, fixed_weights)
-    noise_ss_norm = np.sum(noise_ss_signal * np.conj(noise_ss_signal), axis=1)
-    out_adaptive_bf = np.sum(np.conj(adaptive_weights) * noise_ss_signal, axis=1)
-
-    # compute the error signal and update the beamformer
-    out_frame = out_fixed_bf - out_adaptive_bf
-    adaptive_weights += (step_size / noise_ss_norm[:,None]) * noise_ss_signal * out_frame[:,None]
+    out_frame = gsc.process(X)
 
     # synthesize the output signal
     output_signal[n:n+shift] = stft_output.synthesis(out_frame)
 
     n += shift
 
-wavfile.write('output_mic1.wav', fs, pra.normalize(recording[:,0]) * 0.85)
-wavfile.write('output_gsc.wav', fs, pra.normalize(output_signal) * 0.85)
+m = 0.85 / np.max(np.abs(recording[:,0]))
+wavfile.write('output_mic1.wav', fs, recording[:,0] * m)
+wavfile.write('output_gsc.wav', fs, output_signal * m)
+
