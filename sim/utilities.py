@@ -35,6 +35,44 @@ class Plottable(object):
             plt.show()
 
 
+class LeakyIntegration(object):
+    '''
+    A class that simplifies leaky integration of any values
+    '''
+
+    def __init__(self, ff, func=None, init=None):
+        '''
+        Parameters
+        ----------
+        ff: float
+            forgetting factor
+        func: func, optional
+            A function to apply before the integration
+        '''
+
+        self.sum = init
+        self.ff = ff
+
+        if func is None:
+            self.func = lambda x : x
+        else:
+            self.func = func
+
+    def update(self, X):
+        '''
+        Update the integration with new data
+
+        Parameters
+        ----------
+        X: array_like
+            The new data
+        '''
+        self.sum = self.ff * self.sum + (1 - self.ff) * self.func(X)
+
+    def get(self):
+        return self.sum
+
+
 class ShortTimeAverage(object):
     '''
     A class that simplifies doing short time averaging
@@ -55,6 +93,9 @@ class ShortTimeAverage(object):
 
         self.f = func
         self.L = L
+
+    def __len__(self):
+        return len(self.buf)
 
     def update(self, X):
         '''

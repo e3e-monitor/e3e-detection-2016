@@ -10,7 +10,7 @@ import numpy as np
 from scipy.io import wavfile
 import pyroomacoustics as pra
 
-from gsc import calibration, project_null, GSC
+from gsc import calibration, project_null, GSC, GSC_Newton
 
 fs = 16000
 room_size = [9.9, 7.5, 3.1]
@@ -36,7 +36,7 @@ shift = nfft // 2
 
 # gsc parameters
 step_size = 0.01
-pb_ff = 0.99  # projection back forgetting factor
+pb_ff = 0.9  # projection back forgetting factor
 
 
 #################################
@@ -121,7 +121,8 @@ recording = room.mic_array.signals.T
 ###############
 # Run the GSC #
 
-gsc = GSC(room.mic_array.signals.T, step_size, pb_ff, nfft)
+#gsc = GSC(room.mic_array.signals.T, step_size, pb_ff, nfft)
+gsc = GSC_Newton(room.mic_array.signals.T, 0.005, pb_ff, nfft, 8)
 
 output_signal = np.zeros(recording.shape[0], dtype=recording.dtype)
 
