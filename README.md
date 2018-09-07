@@ -95,7 +95,17 @@ Replace <ARCH> by
 * cortex-a8 for BBB
 * cortex-a9 for DE1-SoC
 
-#### Install GCC with std14 support
+#### Compile OpenBLAS
+
+Note that you should have the same `gfortran` version than gcc
+
+    wget https://github.com/xianyi/OpenBLAS/archive/v0.3.3.tar.gz
+    tar xzfv v0.3.3.tar.gz
+    cd OpenBLAS-0.3.3
+    make TARGET=CORTEXA9
+    make PREFIX=/path/to/pyramic-demo install
+
+#### Install GCC with std14 support (v4.9)
 
 The code uses some C++14 specific commands and requires g++-4.9 minimum to be compiled.
 The current Pyramic image is Ubuntu 14.04 which requires some patching to get the right compiler.
@@ -108,7 +118,7 @@ The current Pyramic image is Ubuntu 14.04 which requires some patching to get th
     # now try to upgrade g++
     sudo add-apt-repository ppa:ubuntu-toolchain-r/test
     sudo apt-get update
-    sudo apt-get install g++-4.9
+    sudo apt-get install g++-4.9 gfortran-4.9
 
 Set the default gcc version used
 
@@ -116,6 +126,8 @@ Set the default gcc version used
     update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.9 20
     update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.8 10
     update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.9 20
+    update-alternatives --install /usr/bin/gfortran gfortran /usr/bin/gfortran-4.8 10
+    update-alternatives --install /usr/bin/gfortran gfortran /usr/bin/gfortran-4.9 20
 
     update-alternatives --set cc /usr/bin/gcc
     update-alternatives --install /usr/bin/cc cc /usr/bin/gcc 30
