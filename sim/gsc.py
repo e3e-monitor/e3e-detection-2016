@@ -36,28 +36,6 @@ def calibration(signal):
     return weights
 
 
-
-def project_null(X, weights):
-    '''
-    Projects the input signal into the null space of the provided weights
-
-    Parameters
-    ----------
-    X: array_like (nfrequencies, nchannels)
-        The input vector
-    weights: array_like (nfrequencies, nchannels)
-        The fixed beamforming weights (should be row-wise unit norm)
-    '''
-
-    nfreq, nchan = X.shape
-    out = np.zeros_like(X)
-
-    for f in range(nfreq):
-        out[f,:] = X[f,:] - np.inner(np.conj(weights[f,:]), X[f,:]) * weights[f,:]
-
-    return out
-
-
 class GSC(Plottable):
 
     def __init__(self, calibration_signal, step_size, pb_ff, nfft, shift=None, win=None):
@@ -104,7 +82,7 @@ class GSC(Plottable):
         out_fixed_bf *= (self.pb_den / self.pb_num)
 
         # the adaptive branch of the GSC
-        noise_ss_signal = project_null(X, self.fixed_weights)
+        noise_ss_signal = X - self.fixed_weights * out_fixed_bf[:,None]  # projection onto null space
         noise_ss_norm = np.sum(noise_ss_signal * np.conj(noise_ss_signal), axis=1)
         out_adaptive_bf = np.sum(np.conj(self.adaptive_weights) * noise_ss_signal, axis=1)
 
@@ -145,18 +123,6 @@ class GSC_Newton(Plottable):
         self.pb_den = np.ones(self.fixed_weights.shape[0], dtype=self.fixed_weights.dtype)
         self.pb_num = np.ones(self.fixed_weights.shape[0], dtype=np.float)
 
-        '''
-        self.estimates = {
-                'covmat' : ShortTimeAverage(
-                    50,  # average over this number of frames
-                    lambda X : X[:,:,None] * np.conj(X[:,None,:]),  # (nfreq, nchan, nchan),
-                    ),
-                'xcov' : ShortTimeAverage(
-                    50,
-                    lambda v : v[0] * np.conj(v[1][:,None]),
-                    ),
-                }
-        '''
         self.estimates = {
                 'covmat' : LeakyIntegration(
                     0.8,  # average over this number of frames
@@ -184,7 +150,7 @@ class GSC_Newton(Plottable):
         out_fixed_bf = np.sum(np.conj(self.fixed_weights) * X, axis=1)
 
         # the adaptive branch of the GSC
-        noise_ss_signal = project_null(X, self.fixed_weights).reshape((-1,self.nchannel // self.ds, self.ds)).sum(axis=-1)
+        noise_ss_signal = X - self.fixed_weights * out_fixed_bf[:,None]  # projection onto null space
         out_adaptive_bf = np.sum(np.conj(self.adaptive_weights) * noise_ss_signal, axis=1)
 
         # update covariance matrix estimate
