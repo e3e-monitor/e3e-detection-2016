@@ -4,12 +4,14 @@
 #include "json.hpp"
 #include "gsc.h"
 
+using nlohmann::json;
+
 GSC::GSC(
     std::string config_file,
-    float _f_max,   // maximum frequency to process, the rest is set to zero
-    float _fs       // the sampling frequency
+    float _fs,     // the sampling frequency
+    int _nchannel  // the number of input channels
     )
-    : f_max(_f_max), fs(_fs)
+    : fs(_fs), nchannel(_nchannel)
 {
   // read in the JSON file containing all the parameters
   std::ifstream i(config_file, std::ifstream::in);
@@ -18,52 +20,49 @@ GSC::GSC(
   i.close();
 
   // assign parameters to object attributes
-  this->nchannel = config['nchannel'];
-  this->nchannel_ds = config['nchannel_ds'];
-  this->nfreq = config['nfft'] / 2 + 1;
-  this->nfft = config['nfft'];
+  this->nchannel_ds = config.at("nchannel_ds").get<int>();
+  this->nfft = config.at("nfft").get<int>();
 
   // algorithms parameters
-  this->rls_ff = config['rls_ff'];    // forgetting factor for RLS
-  this->rls_reg = config['rls_reg'];  // regularization factor for RLS
-  this->pb_ff = config['pb_ff'];      // forgetting factor for projection back
-  this->pb_ref_channel = config['pb_ref_channel'];  // The reference channel for projection back
+  this->rls_ff = config.at("rls_ff").get<float>();    // forgetting factor for RLS
+  this->rls_reg = config.at("rls_reg").get<float>();  // regularization factor for RLS
+  this->pb_ff = config.at("pb_ff").get<float>();      // forgetting factor for projection back
+  this->pb_ref_channel = config.at("pb_ref_channel").get<int>();  // The reference channel for projection back
 
   // Limit frequencies
-  this->f_max = config['f_max'];
-  this->fs = config['fs'];
+  this->f_max = config.at("f_max").get<float>();
   this->f_min_index = 1;  // we skip the DC component in the processing
-  this->f_max_index = int(fceilf(f_max / fs + 0.5)); // round to closest bin
+  this->f_max_index = int(ceilf(this->f_max / this->fs + 0.5)); // round to closest bin
+  this->nfreq = this->f_max_index - this->f_min_index;  // only consider the number of bands processed
 
-  // Get the fixed weights from config file
-  std::vector<double> &real = config['fixed_weights_real']
-  std::vector<double> &imag = config['fixed_weights_imag']
-  this->fixed_weights.resize(this->nfreq * this->nchannel);
-  std::transform(
-      real.begin(), real.end(),
-      imag.begin(),
-      this->fixed_weights.begin(),
-      [](double da, double db) { return e3e_complex( (float)da, (float)db ); }
-      );
+  // Get the fixed weights from config file, the complex numbers are stored
+  // with real/imag parts interleaved i.e. [r0, i0, r1, i1, r2,  ...]
+  // in row-major order
+  std::vector<float> w = config.at("fixed_weights").get<std::vector<float>>();
+  this->fixed_weights = Eigen::ArrayXXcf::Zero(this->nfreq, this->nchannel);
+  for (int f = 0, offset = this->f_min_index * this->nchannel ; f < this->nfreq ; f++, offset += this->nchannel)
+    for (int ch = 0 ; ch < this->nchannel ; ch++)
+      this->fixed_weights(f, ch) = e3e_complex(w[2 * (offset + ch)], w[2 * (offset + ch) + 1]);
   
   // Size the other buffers as needed
-  this->adaptive_weights.resize(this->nfreq * this->nchannel, e3e_complex(0., 0.));
+  this->adaptive_weights = Eigen::ArrayXXcf::Zero(this->nfreq, this->nchannel);
 
   // Intermediate buffers
-  this->output_fixed.resize(this->nfreq, e3e_complex(0., 0.));
-  this->output_null.resize(this->nfreq * this->nchannel, e3e_complex(0., 0.));
-  this->output_null_downsampled.resize(this->nfreq * this->nchannel_ds, e3e_complex(0., 0.));
+  this->output_fixed = Eigen::ArrayXcf::Zero(this->nfreq);
+  this->output_null = Eigen::ArrayXXcf::Zero(this->nfreq, this->nchannel);
+  this->output_adaptive = Eigen::ArrayXcf::Zero(this->nfreq);
 
   // Projection back buffers
-  this->projback_num.resize(this->nfreq, e3e_complex(1., 0.));
-  this->projback_den.resize(this->nfreq, e3e_complex(1., 0.));
+  this->projback_num = Eigen::ArrayXcf::Zero(this->nfreq);
+  this->projback_num = 1.f;
+  this->projback_den = Eigen::ArrayXf::Zero(this->nfreq);
+  this->projback_den = 1.f;
 
   // RLS variables
-  this->covmat_inv.resize(this->nfreq * this->nchannel_ds * this->nchannel_ds, e3e_complex(0., 0.));
-  this->xcov.resize(this->nfreq * this->nchannel_ds, e3e_complex(0., 0.));
-
-  this->rls_init();
-  
+  this->covmat_inv.resize(this->nfreq);
+  for (auto it = this->covmat_inv.begin() ; it != this->covmat_inv.end() ; ++it)
+    *it = Eigen::MatrixXcf::Identity(this->nchannel_ds, this->nchannel_ds) * (1.f / this->rls_reg);
+  this->xcov = Eigen::MatrixXcf::Zero(this->nfreq, this->nchannel_ds);
 }
 
 GSC::~GSC()
@@ -73,43 +72,35 @@ GSC::~GSC()
 
 void GSC::process(e3e_complex_vector &input, e3e_complex_vector &output)
 {
+  // Pre-emptivaly zero-out the content of output buffer
+  for (int f = 0 ; f < this->nchannel * (this->nfft / 2 + 1) ; f++)
+    output[f] = 0.f;
+
+  // Wrap input/output in Eigen::Array
+  int input_offset = this->f_min_index * this->nchannel;
+  Eigen::Map<Eigen::ArrayXXcf> X(&input[input_offset], this->nfreq, this->nchannel);
+  Eigen::Map<Eigen::ArrayXcf> Y(&output[this->f_min_index], this->nfreq);
+
   // Compute the fixed beamformer output
+  this->output_fixed = (fixed_weights.conjugate() * X).rowwise().sum();
 
   // Apply the blocking matrix
 
   // Downsample the channels to a reasonnable number
 
   // Update the adaptive weights
-  this->rls_update( ... )
+  //this->rls_update( ... )
 
   // Do the null branch beamforming
 
   // Compute the output signal
-  for (int f = this->f_min_index ; f <= this->f_max_index ; f++)
-    output[f] = this->output_fixed[f] - this->output_adaptive[f];
-
-  // Make sure that what we don't need in the output is zero
-  for (int f = 0 ; f < this->f_min_index ; f++)
-    output[f] = e3e_complex(0., 0.);
-  for (int f = this->f_max_index + 1 ; f < this->nfreq ; f++)
-    output[f] = e3e_complex(0., 0.);
+  Y = this->output_fixed - this->output_adaptive;
 
   // projection back: apply scale to match the output to channel 1
-  this->projback(input, output, this->pb_ref_channel);
+  this->projback(X, Y, this->pb_ref_channel);
 }
 
-void GSC::rls_init()
-{
-  /*
-   * Initializes the inverse matrix in RLS
-   */
-  int stride = this->nchannel_ds * this_nchannel_ds;
-  for (int f = 0, offset1 = 0 ; f < this->nfreq ; f++, offset1 += stride)
-    for (int ch = 0, offset2 = offset1 ; ch < this->nchannel_ds ; ch++, offset2 += this->nchannel_ds)
-      this->covmat_inv[offset2 + ch] = this->rls_reg;
-}
-
-void GSC::rls_update(e3e_complex_vector &input, e3e_complex_vector &error)
+void GSC::rls_update(Eigen::Map<Eigen::ArrayXXcf> &input, e3e_complex_vector &error)
 {
   /*
    * Updates the inverse covariance matrix and cross-covariance vector.
@@ -133,19 +124,18 @@ void GSC::rls_update(e3e_complex_vector &input, e3e_complex_vector &error)
   }
 }
 
-void GSC::projback(e3e_complex &input, e3e_complex &output, int input_ref_channel)
+void GSC::projback(Eigen::Map<Eigen::ArrayXXcf> &input, Eigen::Map<Eigen::ArrayXcf> &output, int input_ref_channel)
 {
-  int input_stride = this->nfreq * this->nchannel;
-  for (int f = this->f_min_index, i_offset = 0 ; f <= this->f_max_index ; f++, i_offset += input_stride)
-  {
-    // Update the projback factor
-    this->projback_num[f] = ( this->pb_ff * this->projback_num
-        + (1. - this->pb_ff) * std::conj(output[f]) * input[i_offset + input_ref_channel] );
-    this->projback_den[f] = ( this->pb_ff * this->projback_den
-        + (1. - this->pb_ff) * std::conj(output[f]) * output[f] );
+  /*
+   * This function updates the projection back weight and scales
+   * the output with the new coefficient
+   */
 
-    // Apply the projback gain
-    output[f] *= (this->projback_num[f] / this->projback_den[f]);
-  }
+  // slice out the chosen columns of input
+  this->projback_num = this->pb_ff * this->projback_num + (1.f - this->pb_ff) * (output.conjugate() * input.col(input_ref_channel));
+  this->projback_den = this->pb_ff * this->projback_den + (1.f - this->pb_ff) * output.abs2();
+
+  // weight the output
+  output *= (this->projback_num / this->projback_den);
 }
 
