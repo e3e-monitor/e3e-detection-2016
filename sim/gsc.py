@@ -36,28 +36,6 @@ def calibration(signal):
     return weights
 
 
-
-def project_null(X, weights):
-    '''
-    Projects the input signal into the null space of the provided weights
-
-    Parameters
-    ----------
-    X: array_like (nfrequencies, nchannels)
-        The input vector
-    weights: array_like (nfrequencies, nchannels)
-        The fixed beamforming weights (should be row-wise unit norm)
-    '''
-
-    nfreq, nchan = X.shape
-    out = np.zeros_like(X)
-
-    for f in range(nfreq):
-        out[f,:] = X[f,:] - np.inner(np.conj(weights[f,:]), X[f,:]) * weights[f,:]
-
-    return out
-
-
 class GSC(Plottable):
 
     def __init__(self, calibration_signal, step_size, pb_ff, nfft, shift=None, win=None):
@@ -104,7 +82,7 @@ class GSC(Plottable):
         out_fixed_bf *= (self.pb_den / self.pb_num)
 
         # the adaptive branch of the GSC
-        noise_ss_signal = project_null(X, self.fixed_weights)
+        noise_ss_signal = X - self.fixed_weights * out_fixed_bf[:,None]  # projection onto null space
         noise_ss_norm = np.sum(noise_ss_signal * np.conj(noise_ss_signal), axis=1)
         out_adaptive_bf = np.sum(np.conj(self.adaptive_weights) * noise_ss_signal, axis=1)
 
@@ -140,31 +118,20 @@ class GSC_Newton(Plottable):
                 (self.fixed_weights.shape[0], self.nchannel // ds),
                 dtype=self.fixed_weights.dtype
                 )
+        self.adaptive_weights[:,0] = 1.
 
         # projection back weights
         self.pb_den = np.ones(self.fixed_weights.shape[0], dtype=self.fixed_weights.dtype)
         self.pb_num = np.ones(self.fixed_weights.shape[0], dtype=np.float)
 
-        '''
-        self.estimates = {
-                'covmat' : ShortTimeAverage(
-                    50,  # average over this number of frames
-                    lambda X : X[:,:,None] * np.conj(X[:,None,:]),  # (nfreq, nchan, nchan),
-                    ),
-                'xcov' : ShortTimeAverage(
-                    50,
-                    lambda v : v[0] * np.conj(v[1][:,None]),
-                    ),
-                }
-        '''
         self.estimates = {
                 'covmat' : LeakyIntegration(
-                    0.8,  # average over this number of frames
+                    0.97,  # average over this number of frames
                     lambda X : X[:,:,None] * np.conj(X[:,None,:]),  # (nfreq, nchan, nchan),
                     init=np.array([np.eye(self.nchannel // self.ds) for i in range(self.nfft // 2)]) * 1e-3,
                     ),
                 'xcov' : LeakyIntegration(
-                    0.8,
+                    0.97,
                     lambda v : v[0] * np.conj(v[1][:,None]),
                     init=np.zeros((self.nfft // 2, self.nchannel // self.ds))
                     ),
@@ -184,8 +151,7 @@ class GSC_Newton(Plottable):
         out_fixed_bf = np.sum(np.conj(self.fixed_weights) * X, axis=1)
 
         # the adaptive branch of the GSC
-        noise_ss_signal = project_null(X, self.fixed_weights).reshape((-1,self.nchannel // self.ds, self.ds)).sum(axis=-1)
-        out_adaptive_bf = np.sum(np.conj(self.adaptive_weights) * noise_ss_signal, axis=1)
+        noise_ss_signal = (X - self.fixed_weights * out_fixed_bf[:,None]).reshape((-1,self.nchannel // self.ds, self.ds)).sum(axis=-1)  # projection onto null space, and downsampling of channels
 
         # update covariance matrix estimate
         self.estimates['covmat'].update(noise_ss_signal)
@@ -193,18 +159,20 @@ class GSC_Newton(Plottable):
         covmat = self.estimates['covmat'].get()
         xcov = self.estimates['xcov'].get()
 
-        ad_w = np.array([np.linalg.solve(covmat[n] + 1e-15, xcov[n]) 
+        ad_w = np.array([np.linalg.solve(covmat[n] + 1e-5, xcov[n]) 
             for n in range(covmat.shape[0])])
+
+        out_adaptive_bf = np.sum(np.conj(ad_w) * noise_ss_signal, axis=1)
 
         # compute the error signal and update the beamformer
         output[1:] = out_fixed_bf - out_adaptive_bf
 
         # Now run the online projection back (seems more natural to do it on the fixed branch)
-        self.pb_den = ( self.pb_ff * self.pb_den 
+        self.pb_num = ( self.pb_ff * self.pb_num 
                 + (1 - self.pb_ff) * np.conj(output[1:]) * X[:,0] )
-        self.pb_num = ( self.pb_ff * self.pb_num
+        self.pb_den = ( self.pb_ff * self.pb_den
                 + (1 - self.pb_ff) * np.conj(output[1:]) * output[1:] )
-        output[1:] *= (self.pb_den / self.pb_num)
+        output[1:] *= (self.pb_num / self.pb_den)
 
         #mu = self.step_size / (np.sum(whitened * np.conj(whitened), axis=1) + 1e-10)
         #self.adaptive_weights =  0.9 * self.adaptive_weights  + 0.1 * ad_w

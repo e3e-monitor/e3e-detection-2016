@@ -75,6 +75,45 @@ Install compile tools
 To run the code with matrix creator, one needs to install
 
 * FFTW
+* [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page)
+
+The Eigen library is distributed with the code for convenience (in
+`include/Eigen`). It is licensed under [MPL2](http://www.mozilla.org/MPL/2.0).
+For more information see the [official
+website](http://eigen.tuxfamily.org/index.php?title=Main_Page).
+
+#### Install GCC with std14 support (v4.9)
+
+The code uses some C++14 specific commands and requires g++-4.9 minimum to be compiled.
+The current Pyramic image is Ubuntu 14.04 which requires some patching to get the right compiler.
+
+[source](http://scholtyssek.org/blog/2015/06/11/install-gcc-with-c14-support-on-ubuntumint/)
+
+    # install the add-apt-repository command
+    apt-get install software-properties-common python-software-properties
+
+    # now try to upgrade g++
+    sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+    sudo apt-get update
+    sudo apt-get install g++-4.9 gfortran-4.9
+
+Set the default gcc version used
+
+    update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.8 10
+    update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.9 20
+    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.8 10
+    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.9 20
+    update-alternatives --install /usr/bin/gfortran gfortran /usr/bin/gfortran-4.8 10
+    update-alternatives --install /usr/bin/gfortran gfortran /usr/bin/gfortran-4.9 20
+
+    update-alternatives --set cc /usr/bin/gcc
+    update-alternatives --install /usr/bin/cc cc /usr/bin/gcc 30
+    update-alternatives --set c++ /usr/bin/g++
+    update-alternatives --install /usr/bin/c++ c++ /usr/bin/g++ 30
+
+Check that version 4.9 is called when running
+
+    g++ --version
 
 #### Compile FFTW
 
@@ -95,33 +134,13 @@ Replace <ARCH> by
 * cortex-a8 for BBB
 * cortex-a9 for DE1-SoC
 
-#### Install GCC with std14 support
+#### Compile OpenBLAS (not actually used)
 
-The code uses some C++14 specific commands and requires g++-4.9 minimum to be compiled.
-The current Pyramic image is Ubuntu 14.04 which requires some patching to get the right compiler.
+Note that you should have the same `gfortran` version than gcc
 
-[source](http://scholtyssek.org/blog/2015/06/11/install-gcc-with-c14-support-on-ubuntumint/)
+    wget https://github.com/xianyi/OpenBLAS/archive/v0.3.3.tar.gz
+    tar xzfv v0.3.3.tar.gz
+    cd OpenBLAS-0.3.3
+    make TARGET=CORTEXA9
+    make PREFIX=/path/to/pyramic-demo install
 
-    # install the add-apt-repository command
-    apt-get install software-properties-common python-software-properties
-
-    # now try to upgrade g++
-    sudo add-apt-repository ppa:ubuntu-toolchain-r/test
-    sudo apt-get update
-    sudo apt-get install g++-4.9
-
-Set the default gcc version used
-
-    update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.8 10
-    update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.9 20
-    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.8 10
-    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.9 20
-
-    update-alternatives --set cc /usr/bin/gcc
-    update-alternatives --install /usr/bin/cc cc /usr/bin/gcc 30
-    update-alternatives --set c++ /usr/bin/g++
-    update-alternatives --install /usr/bin/c++ c++ /usr/bin/g++ 30
-
-Check that version 4.9 is called when running
-
-    g++ --version
