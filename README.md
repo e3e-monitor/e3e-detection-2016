@@ -75,35 +75,12 @@ Install compile tools
 To run the code with matrix creator, one needs to install
 
 * FFTW
+* [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page)
 
-#### Compile FFTW
-
-Compile FFTW on ARM with floating point NEON support
-
-    apt-get install gfortran
-
-    wget http://www.fftw.org/fftw-3.3.4.tar.gz
-    tar xzfv fftw-3.3.4.tar.gz
-    cd fftw-3.3.4
-    ./configure --enable-single --enable-neon ARM_CPU_TYPE=<ARCH> --enable-shared
-    make
-    make install
-    ldconfig
-
-Replace <ARCH> by
-
-* cortex-a8 for BBB
-* cortex-a9 for DE1-SoC
-
-#### Compile OpenBLAS
-
-Note that you should have the same `gfortran` version than gcc
-
-    wget https://github.com/xianyi/OpenBLAS/archive/v0.3.3.tar.gz
-    tar xzfv v0.3.3.tar.gz
-    cd OpenBLAS-0.3.3
-    make TARGET=CORTEXA9
-    make PREFIX=/path/to/pyramic-demo install
+The Eigen library is distributed with the code for convenience (in
+`include/Eigen`). It is licensed under [MPL2](http://www.mozilla.org/MPL/2.0).
+For more information see the [official
+website](http://eigen.tuxfamily.org/index.php?title=Main_Page).
 
 #### Install GCC with std14 support (v4.9)
 
@@ -137,3 +114,33 @@ Set the default gcc version used
 Check that version 4.9 is called when running
 
     g++ --version
+
+#### Compile FFTW
+
+Compile FFTW on ARM with floating point NEON support
+
+    apt-get install gfortran
+
+    wget http://www.fftw.org/fftw-3.3.4.tar.gz
+    tar xzfv fftw-3.3.4.tar.gz
+    cd fftw-3.3.4
+    ./configure --enable-single --enable-neon ARM_CPU_TYPE=<ARCH> --enable-shared
+    make
+    make install
+    ldconfig
+
+Replace <ARCH> by
+
+* cortex-a8 for BBB
+* cortex-a9 for DE1-SoC
+
+#### Compile OpenBLAS (not actually used)
+
+Note that you should have the same `gfortran` version than gcc
+
+    wget https://github.com/xianyi/OpenBLAS/archive/v0.3.3.tar.gz
+    tar xzfv v0.3.3.tar.gz
+    cd OpenBLAS-0.3.3
+    make TARGET=CORTEXA9
+    make PREFIX=/path/to/pyramic-demo install
+
