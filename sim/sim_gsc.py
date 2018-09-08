@@ -10,7 +10,7 @@ import numpy as np
 from scipy.io import wavfile
 import pyroomacoustics as pra
 
-from gsc import calibration, project_null, GSC, GSC_Newton
+from gsc import calibration, GSC, GSC_Newton
 
 fs = 16000
 room_size = [9.9, 7.5, 3.1]

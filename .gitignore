@@ -6,8 +6,12 @@ lib/*
 bin/*
 tests/bin/*
 
+# audio files
+*.wav
+
 # junk files
 *.swp
+__pycache__
 
 # Ignore Mac specific files
 .DS_Store

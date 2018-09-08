@@ -25,21 +25,21 @@ class GSC
     int nfft;
 
     // The beamforming weights
-    e3e_complex_vector fixed_weights;
-    e3e_complex_vector adaptive_weights;
+    e3e_complex_vector fixed_weights;    // size: (nfreq, nchannel)
+    e3e_complex_vector adaptive_weights; // size: (nfreq, nchannel_ds)
 
     // The intermediate buffers
-    e3e_complex_vector output_fixed;
-    e3e_complex_vector output_null;
-    e3e_complex_vector output_null_downsampled;
+    e3e_complex_vector output_fixed;  // size: (nfreq)
+    e3e_complex_vector output_null;   // size: (nfreq, nchannels_ds)
+    e3e_complex_vector output_null_downsampled;  // size: (nfreq)
 
     // Projection back variables
-    e3e_complex_vector projback_num;  // numerator
-    e3e_complex_vector projback_den;  // denominator
+    e3e_complex_vector projback_num;  // numerator, size: (nfreq)
+    e3e_complex_vector projback_den;  // denominator, size: (nfreq)
 
     // RLS variables
-    e3e_complex_vector covmat_inv;  // inverse covariance matrices
-    e3e_complex_vector xcov;        // cross covariance vectors
+    e3e_complex_vector covmat_inv;  // inverse covariance matrices, size: (nfreq, nchannel_ds, nchannel_ds)
+    e3e_complex_vector xcov;        // cross covariance vectors, size: (nfreq, nchannel_ds)
 
     GSC(
         std::string fixed_beamformer_file,  // name of file storing the fixed beamforming weights
