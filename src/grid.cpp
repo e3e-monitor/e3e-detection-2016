@@ -1,12 +1,12 @@
-#include "non_uniform_grid.h"
+#include "grid.h"
 #include "json.hpp"
 using nlohmann::json as json;
 
 
-NonUniformGrid::NonUniformGrid(STFT * stft, std::string config, double *look_dir, double beta, int n_dir, double fs, double c, int ndim)
-: stft(stft), config_name(config), look_dir(look_dir), beta(beta), n_dir(n_dir), fs(fs), c(c)
+NonUniformGrid::NonUniformGrid(nfft, std::string config, double *look_dir, double beta, int n_dir, double fs, double c, int ndim)
+: nfft(nfft), config_name(config), look_dir(look_dir), beta(beta), n_dir(n_dir), fs(fs), c(c)
 {
-  this->fft_size = stft->fft_size;
+  this->fft_size = nfft;
   this->ndim = ndim;
   
   double A = 2 * M_PI * (1 - cos(beta/2));
@@ -17,10 +17,11 @@ NonUniformGrid::NonUniformGrid(STFT * stft, std::string config, double *look_dir
   this->frac_back = n_dir - frac_cap;
 
   // Grid for the steering vectors
-  float **dense_grid, **sparse_grid, **dense_grid_cart, **sparse_grid_cart;
-  float **R;
-  float **dense_points;
-  float **sparse_points;
+  double dense_grid[dense_dir * ndim], dense_grid_cart[dense_dir * ndim];
+  double sparse_grid[sparse_dir * ndim], sparse_grid_cart[dense_dir * ndim];
+  double R;   // matrix
+  double dense_points;  // matrix
+  float sparse_points;  // matrix
 
   // Normalize steering direction
   float look_dir_acc = 0;

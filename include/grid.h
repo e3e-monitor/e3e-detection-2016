@@ -1,8 +1,8 @@
-#ifndef __NON_UNIFORM_GRID_H__
-#define __NON_UNIFORM_GRID_H__
+#ifndef __GRID_H__
+#define __GRID_H__
 
 /*
- * Imagine a good file description..  
+ * Defines a class that allows to create grids of points on the sphere in a uniform or non-uniform way
  */
 
 #include <cmath>
@@ -23,10 +23,9 @@ class NonUniformGrid
 {
   public:
 
-    int look_dir;
+    int look_dir, nfft, n_dir, fft_size;
     double beta;
     int n_dir;
-    int fft_size;
     int fs;
     int c;          // Speed of sound
     int frac_cap;
@@ -50,7 +49,7 @@ class NonUniformGrid
     void read_mic_locs();   // Read JSON files
     void build_lut(); 
      
-    NonUniformGrid(STFT * stft, std::string config, int *look_dir, double beta, int n_dir, double fs, double c, int ndim);
+    NonUniformGrid(nfft, std::string config, int *look_dir, double beta, int n_dir, double fs, double c, int ndim);
     ~NonUniformGrid();
 };
 
