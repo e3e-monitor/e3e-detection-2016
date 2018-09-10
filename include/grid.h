@@ -17,7 +17,6 @@
 #include <string>
 #include "e3e_detection.h"
 #include "stft.h"
-#include "srpphat.h"
 
 class NonUniformGrid 
 {

@@ -34,24 +34,6 @@ NonUniformGrid::NonUniformGrid(nfft, std::string config, double *look_dir, doubl
       look_dir[i] /= sqrt(look_dir_acc);
   }
 
-  // Create dense grid
-  dense_grid = new float *[this->dense_dir];
-  dense_grid_cart = new float *[this->dense_dir];
-  for (int n = 0 ; n < this->dense_dir ; n++)
-  {
-    dense_grid[n] = new float[ndim];
-    dense_grid_cart[n] = new float[ndim];
-  }
-
-  // Create sparse grid
-  sparse_grid = new float *[this->sparse_dir];
-  sparse_grid_cart = new float *[this->sparse_dir];
-  for (int n=0; n < this->sparse_dir; n++)
-  {
-    sparse_grid[n] = new float[ndim];
-    sparse_grid_cart[n] = new float[ndim];
-  }
-
   if (ndim == 2)
   {
     sample_sp_even_points_2D(dense_grid, dense_grid_cart, this->dense_dir);
@@ -141,7 +123,7 @@ void NonUniformGrid::build_lut()
 
 }
 
-void SRPPHAT::read_mic_locs()
+void NonUniformGrid::read_mic_locs()
 {
   // read pyramic positions from JSON file
   std::ifstream read_positions(this->config_name);
