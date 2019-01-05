@@ -1,45 +1,38 @@
+#
+# Makefile to compile the pyramic demo and tests
+#
+# Author: Robin Scheibler
 
-CC=c++
-DEBUG=-g -Wall
-CPPFLAGS=-std=c++14 -lfftw3f $(DEBUG)
+CC := g++
+DEBUG := -g -Wall
+SPEEDFLAGS=-O3 -ffast-math -ftree-vectorize -funroll-loops # -mcpu=cortex-a9 -ftree-loop-ivcanon -mfpu=neon -mfloat-abi=hard
+#CPPFLAGS := -std=c++14 -lfftw3f $(SPEEDFLAGS)
+CPPFLAGS := -std=c++14 $(DEBUG) 
+LDFLAGS := -L "./lib"
+LIB := -lfftw3f -lpyramicio -lpthread
+INC := -I "./include"
 
-MCDIR=../../matrix-creator-hal/cpp/driver/
-MCOBJS=everloop_image everloop microphone_array wishbone_bus
+SRCDIR := src
+BUILDDIR := build
 
-HDR=src/stft.h src/mfcc.h src/e3e_detection.h
-SRC=stft.cpp srpphat.cpp
-OBJS=src/stft.o src/mfcc.o src/srpphat.o
-TESTS=test_complex test_fftw test_stft test_stft_speed test_mfcc \
-	test_sphere_sampling test_srpphat test_trigger_stft
+SRCEXT := cpp
+SOURCES := $(shell find $(SRCDIR) -type f | grep \.$(SRCEXT)$$) #stft.cpp srpphat.cpp windows.cpp
+OBJECTS := $(patsubst $(SRCDIR)/%,$(BUILDDIR)/%,$(SOURCES:.$(SRCEXT)=.o))
+TESTS := $(shell find tests -type f | grep \.$(SRCEXT)$$ | cut -f 1 -d '.' | xargs basename -a)
 
-%.o: %.c $(HDR)
-	$(CC) -c -o $@ $< $(CPPFLAGS)
+hello:
+	@echo $(TESTS)
+	@echo $(OBJECTS)
 
-test_trigger_stft: $(OBJS) tests/test_trigger_stft.o
-	$(CC) -o tests/$@ $^ $(CPPFLAGS) -lmatrix_creator_hal -lwiringPi
+$(BUILDDIR)/%.o: $(SRCDIR)/%.$(SRCEXT)
+	mkdir -p build
+	$(CC) -c -o $@ $< $(LDFLAGS) $(INC) $(LIB) $(CPPFLAGS)
 
-test_srpphat: $(OBJS) tests/test_srpphat.o
-	$(CC) -o tests/$@ $^ $(CPPFLAGS)
-
-test_sphere_sampling: $(OBJS) tests/test_sphere_sampling.o
-	$(CC) -o tests/$@ $^ $(CPPFLAGS)
-
-test_mfcc: $(OBJS) tests/test_mfcc.o
-	$(CC) -o tests/$@ $^ $(CPPFLAGS)
-
-test_stft_speed: $(OBJS) tests/test_stft_speed.o
-	$(CC) -o tests/$@ $^ $(CPPFLAGS)
-
-test_stft: $(OBJS) tests/test_stft.o src/stft.o
-	$(CC) -o tests/$@ $^ $(CPPFLAGS)
-
-test_fftw: tests/test_fftw.o
-	$(CC) -o tests/$@ $^ $(CPPFLAGS)
-
-test_complex: tests/test_complex.o
-	$(CC) -o tests/$@ $^ $(CPPFLAGS)
+$(TESTS): $(OBJECTS)
+	mkdir -p tests/bin
+	$(CC) tests/$@.cpp -o tests/bin/$@ $^ $(LDFLAGS) $(INC) $(LIB) $(CPPFLAGS)
 
 tests: $(TESTS)
 
 clean:
-	rm -f tests/*.o ./test_* src/*.o
+	rm -f bin/* build/* tests/bin/*

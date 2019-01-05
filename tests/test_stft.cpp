@@ -5,21 +5,18 @@
 #include <complex>
 #include <cmath>
 #include <random>
+#include <stdio.h>
 
 #include <fftw3.h>
 
-#include "../src/e3e_detection.h"
-#include "../src/stft.h"
+#include "e3e_detection.h"
+#include "stft.h"
 
-#define FFT_SIZE 512
-#define FRAME_SIZE 512
-#define NFRAMES 100
-#define CHANNELS 8
 
 // Initialize RNG with random seed
 unsigned int time_ui = static_cast<unsigned int>( time(NULL) );
 std::default_random_engine generator(time_ui);
-std::uniform_real_distribution<float> dist(0,1.);
+std::uniform_real_distribution<float> dist(0,5.);
 
 // A wrapper to fill the arrays
 float rand_val()
@@ -27,75 +24,71 @@ float rand_val()
   return dist(generator);
 }
 
-int main(int argc, char **argv)
+void test_stft(int NFRAMES, int SHIFT, int FFT_SIZE, int CHANNELS, int ZB, int ZF, int WFLAG)
 {
-  float buf_in[FFT_SIZE];
-  e3e_complex buf_out[FFT_SIZE/2 + 1];
-  fftwf_complex *X = reinterpret_cast<fftwf_complex *>(buf_out);
 
-  STFT engine(FFT_SIZE, NFRAMES, CHANNELS);
+  float buf_in[NFRAMES * SHIFT * CHANNELS];
+  float buf_out[NFRAMES * SHIFT * CHANNELS];
 
-  fftwf_plan p_bac = fftwf_plan_dft_c2r_1d(FFT_SIZE, X, buf_in, FFTW_ESTIMATE);
+  STFT engine(SHIFT, FFT_SIZE, ZB, ZF, CHANNELS, WFLAG);
 
   double total_error = 0.;
-  double errors[NFRAMES * CHANNELS] = {0};
-  float *buf_ptr;
 
-  for (int frame = 0 ; frame < NFRAMES + 5 ; frame++)
+  float *buf_in_ptr = buf_in;
+  float *buf_out_ptr = buf_out;
+
+  for (int frame = 0 ; frame < NFRAMES ; frame++)
   {
-    buf_ptr = engine.get_in_buffer();
-
-    // fill buffer with random data
-    for (int i = 0 ; i < FRAME_SIZE ; i++)
+    // generate new values
+    for (int sample = 0 ; sample < SHIFT ; sample++)
       for (int ch = 0 ; ch < CHANNELS ; ch++)
-        buf_ptr[i*CHANNELS + ch] = rand_val();
+        buf_in_ptr[sample * CHANNELS + ch] = rand_val();
 
-    engine.transform();
+    // process forward and backward
+    engine.analysis(buf_in_ptr);
+    engine.synthesis(buf_out_ptr);
+
+    buf_in_ptr += SHIFT * CHANNELS;
+    buf_out_ptr += SHIFT * CHANNELS;
   }
 
-  for (int frame = 0 ; frame < NFRAMES ; frame++)
+  int offset = (FFT_SIZE - SHIFT) * CHANNELS;
+  for (int i = 0 ; i < NFRAMES * SHIFT * CHANNELS - offset ; i++)
   {
-    for (int ch = 0 ; ch < CHANNELS ; ch++)
-    {
-      // fill in test buffer
-      for (int i = 0 ; i < FFT_SIZE / 2 + 1 ; i++)
-        buf_out[i] = engine.get_fd_sample(frame, i, ch);
+    double e = (buf_in[i] - buf_out[i+offset]);
 
-      // now do inverse transform
-      fftwf_execute(p_bac);
+    /*
+    std::cout << "frame " << i << " error " << e << " " << buf_in[i] << " " << buf_out[i+offset] << "\n";
+    std::cout.flush();
+    */
 
-      for (int i = 0 ; i < FFT_SIZE ; i++)
-      {
-        double e = buf_in[i] / FFT_SIZE - engine.get_td_sample(frame, i, ch);
-        errors[frame * CHANNELS + ch] += e*e;
-      }
-
-      total_error += errors[frame * CHANNELS + ch];
-    }
-
-  }
-    
-  std::cout << "Average error: " << total_error / (CHANNELS * NFRAMES) << std::endl;
-
-  for (int frame = 0 ; frame < NFRAMES ; frame++)
-  {
-    for (int ch = 0 ; ch < CHANNELS ; ch++)
-    {
-      if (errors[frame * CHANNELS + ch] > 1e-5)
-      {
-        std::cout << "** Ouch this is too large!! **" << std::endl;
-        std::cout << "Error: " << errors[frame * CHANNELS + ch] << std::endl;
-        std::cout << "Input:" << std::endl;
-        for (int i = 0 ; i < FFT_SIZE ; i++)
-          std::cout << engine.get_td_sample(frame, i, ch) << " ";
-        std::cout << std::endl;
-
-        std::cout << "Output:" << std::endl;
-        for (int i = 0 ; i < FFT_SIZE / 2 + 1 ; i++)
-          std::cout << engine.get_fd_sample(frame, i, ch) << " ";
-        std::cout << std::endl;
-      }
-    }
+    total_error = e * e;
   }
 
+  printf("fft_size=%d shift=%d channels=%d zb=%d zf=%d ", FFT_SIZE, SHIFT, CHANNELS, ZB, ZF);
+  if (WFLAG == STFT_NO_WINDOW)
+    printf("no window");
+  else if (WFLAG == STFT_WINDOW_ANALYSIS)
+    printf("analysis window");
+  else if (WFLAG == STFT_WINDOW_BOTH)
+    printf("analysis and synthesis windows");
+  printf("\n");
+
+  printf("  Average error: %f\n", total_error / (SHIFT * CHANNELS * NFRAMES));
+}
+
+int main(int argc, char **argv)
+{
+  test_stft(100, 128, 128, 1, 0, 0, STFT_NO_WINDOW);
+  test_stft(100, 128, 128, 4, 0, 0, STFT_NO_WINDOW);
+  test_stft(100, 128, 256, 1, 0, 0, STFT_WINDOW_ANALYSIS);
+  test_stft(100, 128, 256, 4, 0, 0, STFT_WINDOW_ANALYSIS);
+  test_stft(100, 128, 256, 1, 0, 0, STFT_WINDOW_BOTH);
+  test_stft(100, 128, 256, 4, 0, 0, STFT_WINDOW_BOTH);
+  test_stft(100, 68, 256, 1, 0, 0, STFT_WINDOW_BOTH);
+  test_stft(100, 68, 256, 4, 0, 0, STFT_WINDOW_BOTH);
+  test_stft(100, 150, 256, 1, 0, 0, STFT_WINDOW_BOTH);
+  test_stft(100, 150, 256, 4, 0, 0, STFT_WINDOW_BOTH);
+
+  return 0;
 }

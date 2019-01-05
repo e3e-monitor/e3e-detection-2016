@@ -9,12 +9,10 @@
 
 #include <fftw3.h>
 
-#include "../src/stft.h"
+#include "stft.h"
 
-#define FFT_SIZE 512
-#define FRAME_SIZE 512
 #define NFRAMES 1000
-#define CHANNELS 8
+#define CHANNELS 48
 
 // Initialize RNG with random seed
 unsigned int time_ui = static_cast<unsigned int>( time(NULL) );
@@ -29,36 +27,35 @@ float rand_val()
 
 int main(int argc, char **argv)
 {
-  std::vector<int> fft_size = { 64, 128, 256, 512, 1024, 2048, 4096 };
+  std::vector<int> frame_size = { 64, 128, 256, 512, 1024, 2048, 4096 };
   time_t now, ellapsed;
   STFT *engine;
 
-  for (int i = 0 ; i < fft_size.size() ; i++)
+  for (int i = 0 ; i < frame_size.size() ; i++)
   {
 
-    engine = new STFT(fft_size[i], NFRAMES, CHANNELS);
+    engine = new STFT(frame_size[i], frame_size[i] * 2, 0, 0, CHANNELS, STFT_WINDOW_BOTH);
 
+    float buf_in[frame_size[i] * CHANNELS];
+    float buf_out[frame_size[i] * CHANNELS];
 
-    for (int frame = 0 ; frame < NFRAMES ; frame++)
-    {
-      float *buf_ptr = engine->get_in_buffer();
-
-      // fill buffer with random data
-      for (int i = 0 ; i < FRAME_SIZE ; i++)
-        for (int ch = 0 ; ch < CHANNELS ; ch++)
-          buf_ptr[i*CHANNELS + ch] = rand_val();
-    }
+    for (int frame = 0 ; frame < frame_size[i] ; frame++)
+      for (int ch = 0 ; ch < CHANNELS ; ch++)
+        buf_in[frame*CHANNELS + ch] = rand_val();
 
     now = clock();
     for (int frame = 0 ; frame < NFRAMES ; frame++)
-      engine->transform();
+    {
+      engine->analysis(buf_in);
+      engine->synthesis(buf_out);
+    }
     ellapsed = clock() - now;
 
     delete engine;
 
-    std::cout << fft_size[i] << ": ";
+    std::cout << frame_size[i] << ": ";
     std::cout << float(ellapsed) / NFRAMES << " us, ";
-    std::cout << " n samples @ 16kHz: " << 1000 * 1000 * float(fft_size[i]) / 16000 << " us " << std::endl;
+    std::cout << " n samples @ 48kHz: " << 1000 * 1000 * float(frame_size[i]) / 48000 << " us " << std::endl;
 
   }
 

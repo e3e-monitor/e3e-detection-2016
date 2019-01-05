@@ -1,0 +1,17 @@
+# Ignore the build and lib dirs
+build
+lib/*
+
+# Ignore any executables
+bin/*
+tests/bin/*
+
+# audio files
+*.wav
+
+# junk files
+*.swp
+__pycache__
+
+# Ignore Mac specific files
+.DS_Store
